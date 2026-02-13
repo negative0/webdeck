@@ -1,0 +1,29 @@
+[
+  {
+    "id": "1",
+    "label": "Browser",
+    "icon": "Globe",
+    "command": "google-chrome",
+    "color": "#3b82f6",
+    "row": 0,
+    "col": 0
+  },
+  {
+    "id": "2",
+    "label": "Terminal",
+    "icon": "Terminal",
+    "command": "gnome-terminal",
+    "color": "#10b981",
+    "row": 0,
+    "col": 1
+  },
+  {
+    "id": "3",
+    "label": "Mute",
+    "icon": "MicOff",
+    "command": "amixer set Master mute",
+    "color": "#ef4444",
+    "row": 0,
+    "col": 2
+  }
+]

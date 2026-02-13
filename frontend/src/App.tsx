@@ -1,0 +1,384 @@
+import React, { useState, useEffect } from 'react';
+import { Layout, Settings, Plus, RefreshCw, Monitor, Smartphone, Terminal, Play, LogOut, Sparkles } from 'lucide-react';
+import { DeckGrid } from './components/DeckGrid';
+import { CommandConfig } from './components/CommandConfig';
+import { deckService, DeckButton } from './services/deck.service';
+import { authService } from './services/auth.service';
+import { AuthPage } from './pages/AuthPage';
+
+function App() {
+  const [user, setUser] = useState(authService.getCurrentUser());
+  const [buttons, setButtons] = useState<DeckButton[]>([]);
+  const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [editingButton, setEditingButton] = useState<DeckButton | undefined>();
+  const [targetPosition, setTargetPosition] = useState<{ row: number; col: number } | undefined>();
+  const [isAiMode, setIsAiMode] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'control' | 'edit'>('control');
+  const [logs, setLogs] = useState<{ msg: string; type: 'success' | 'error' | 'info' }[]>([]);
+
+  useEffect(() => {
+    if (user) {
+      fetchDeck();
+    }
+  }, [user]);
+
+  const fetchDeck = async () => {
+    setIsLoading(true);
+    try {
+      const data = await deckService.getDeckConfig();
+      setButtons(data);
+      addLog('Deck configuration loaded', 'info');
+    } catch (error) {
+      addLog('Failed to load deck configuration', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    authService.logout();
+    setUser(null);
+    setButtons([]);
+  };
+
+  const addLog = (msg: string, type: 'success' | 'error' | 'info') => {
+    setLogs((prev) => [{ msg, type }, ...prev].slice(0, 5));
+  };
+
+  if (!user) {
+    return <AuthPage onAuthSuccess={() => setUser(authService.getCurrentUser())} />;
+  }
+
+  const handleExecute = async (command: string, type: string = 'COMMAND') => {
+    addLog(`Executing ${type}: ${command}`, 'info');
+    try {
+      const result = await deckService.executeCommand(command, type);
+      if (result.success) {
+        addLog(`${type} executed successfully`, 'success');
+      } else {
+        addLog(`Execution error: ${result.error}`, 'error');
+      }
+    } catch (error: any) {
+      addLog(`Failed to execute: ${error.message}`, 'error');
+    }
+  };
+
+  const handleSaveButton = async (button: DeckButton) => {
+    const newButtons = [...buttons];
+    const index = newButtons.findIndex((b) => b.id === button.id);
+    
+    if (index >= 0) {
+      newButtons[index] = button;
+    } else {
+      newButtons.push(button);
+    }
+
+    try {
+      await deckService.saveDeckConfig(newButtons);
+      setButtons(newButtons);
+      setIsConfigOpen(false);
+      setIsAiMode(false);
+      setEditingButton(undefined);
+      setTargetPosition(undefined);
+      addLog('Button saved', 'success');
+    } catch (error) {
+      addLog('Failed to save button', 'error');
+    }
+  };
+
+  const handleDeleteButton = async (id: string) => {
+    const newButtons = buttons.filter((b) => b.id !== id);
+    try {
+      await deckService.saveDeckConfig(newButtons);
+      setButtons(newButtons);
+      setIsConfigOpen(false);
+      setIsAiMode(false);
+      setEditingButton(undefined);
+      setTargetPosition(undefined);
+      addLog('Button deleted', 'success');
+    } catch (error) {
+      addLog('Failed to delete button', 'error');
+    }
+  };
+
+  const rows = 3;
+  const cols = 5;
+
+  const handleAddAtPosition = (row: number, col: number) => {
+    if (activeTab === 'edit') {
+      setEditingButton(undefined);
+      setTargetPosition({ row, col });
+      setIsAiMode(false);
+      setIsConfigOpen(true);
+    }
+  };
+
+  const getAvailablePositions = () => {
+    const positions = [];
+    if (targetPosition) return [targetPosition];
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (!buttons.find((b) => b.row === r && b.col === c)) {
+          positions.push({ row: r, col: c });
+        }
+      }
+    }
+    return positions;
+  };
+
+  return (
+    <div className="min-h-screen bg-black text-gray-100 font-sans selection:bg-blue-500/30 relative">
+      <div className="absolute inset-0 bg-dot-pattern pointer-events-none"></div>
+      {/* Header */}
+      <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-md sticky top-0 z-40">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <Layout className="text-white" size={24} />
+            </div>
+            <div>
+              <h1 className="text-xl font-black tracking-tight text-white">WebDeck</h1>
+              <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Virtual Control Center</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:flex items-center gap-2 bg-gray-800 p-1 rounded-xl">
+              <button
+                onClick={() => setActiveTab('control')}
+                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
+                  activeTab === 'control' ? 'bg-gray-700 text-white shadow-sm' : 'text-gray-400 hover:text-gray-300'
+                }`}
+              >
+                <Play size={16} />
+                Deck
+              </button>
+              <button
+                onClick={() => setActiveTab('edit')}
+                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
+                  activeTab === 'edit' ? 'bg-gray-700 text-white shadow-sm' : 'text-gray-400 hover:text-gray-300'
+                }`}
+              >
+                <Settings size={16} />
+                Config
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3 pl-4 border-l border-gray-800">
+              <div className="text-right hidden sm:block">
+                <p className="text-xs font-bold text-white leading-none">{user?.name || 'User'}</p>
+                <p className="text-[10px] text-gray-500 font-medium">{user?.email}</p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="w-10 h-10 flex items-center justify-center bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white rounded-xl transition-all"
+                title="Log Out"
+              >
+                <LogOut size={20} />
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        {/* Mobile Tab Switcher */}
+        <div className="sm:hidden border-t border-gray-800 flex bg-gray-900/50">
+          <button
+            onClick={() => setActiveTab('control')}
+            className={`flex-1 py-3 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 ${
+              activeTab === 'control' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-500'
+            }`}
+          >
+            <Play size={14} />
+            Deck
+          </button>
+          <button
+            onClick={() => setActiveTab('edit')}
+            className={`flex-1 py-3 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 ${
+              activeTab === 'edit' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-500'
+            }`}
+          >
+            <Settings size={14} />
+            Config
+          </button>
+        </div>
+      </header>
+
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+        <div className="flex flex-col gap-8">
+          {/* Main Grid Section */}
+          <section className="relative">
+            {activeTab === 'edit' && (
+              <div className="absolute -top-4 -right-4 z-10 flex items-center bg-black rounded-full border border-gray-800 p-1 gap-1 shadow-2xl">
+                <button
+                  onClick={() => {
+                    setEditingButton(undefined);
+                    setTargetPosition(undefined);
+                    setIsAiMode(false);
+                    setIsConfigOpen(true);
+                  }}
+                  className="h-12 px-6 bg-blue-600 hover:bg-blue-500 text-white rounded-full font-bold flex items-center gap-2 transition-all active:scale-95"
+                  title="Create New"
+                >
+                  <Plus size={20} />
+                  <span>Create</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingButton(undefined);
+                    setTargetPosition(undefined);
+                    setIsAiMode(true);
+                    setIsConfigOpen(true);
+                  }}
+                  className="w-12 h-12 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full flex items-center justify-center transition-all active:scale-95"
+                  title="AI Generate"
+                >
+                  <Sparkles size={20} />
+                </button>
+              </div>
+            )}
+
+            {isLoading ? (
+              <div className="h-96 flex flex-col items-center justify-center gap-4 text-gray-500">
+                <RefreshCw className="animate-spin" size={48} />
+                <p className="font-medium">Connecting to Host...</p>
+              </div>
+            ) : (
+              <div className={activeTab === 'edit' ? 'opacity-75' : ''}>
+                <DeckGrid
+                  buttons={buttons}
+                  onAdd={handleAddAtPosition}
+                  onExecute={(cmd, type) => {
+                    if (activeTab === 'edit') {
+                      const btn = buttons.find(b => b.command === cmd && b.type === type);
+                      if (btn) {
+                        setEditingButton(btn);
+                        setTargetPosition(undefined);
+                        setIsAiMode(false);
+                        setIsConfigOpen(true);
+                      }
+                    } else {
+                      handleExecute(cmd, type);
+                    }
+                  }}
+                  rows={rows}
+                  cols={cols}
+                />
+              </div>
+            )}
+          </section>
+          
+          {/* Action Row for Mobile/Better Visibility */}
+          {activeTab === 'edit' && (
+            <div className="flex bg-gray-900 border border-gray-800 p-2 rounded-2xl gap-2 sm:hidden shadow-xl">
+              <button
+                onClick={() => {
+                  setEditingButton(undefined);
+                  setTargetPosition(undefined);
+                  setIsAiMode(false);
+                  setIsConfigOpen(true);
+                }}
+                className="flex-1 bg-blue-600 py-3 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+              >
+                <Plus size={20} /> Create
+              </button>
+              <button
+                onClick={() => {
+                  setEditingButton(undefined);
+                  setTargetPosition(undefined);
+                  setIsAiMode(true);
+                  setIsConfigOpen(true);
+                }}
+                className="w-14 bg-indigo-600 rounded-xl flex items-center justify-center active:scale-95 transition-transform"
+              >
+                <Sparkles size={20} className="text-white" />
+              </button>
+            </div>
+          )}
+
+          {/* Status & Info Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Logs */}
+            <div className="bg-gray-900/50 border border-gray-800 rounded-3xl p-6 overflow-hidden">
+              <div className="flex items-center gap-2 mb-4 text-gray-400">
+                <Terminal size={18} />
+                <h3 className="text-sm font-bold uppercase tracking-widest">Activity Log</h3>
+              </div>
+              <div className="space-y-2 font-mono text-sm h-32 overflow-y-auto">
+                {logs.length > 0 ? (
+                  logs.map((log, i) => (
+                    <div
+                      key={i}
+                      className={`flex gap-2 ${
+                        log.type === 'error' ? 'text-red-400' : log.type === 'success' ? 'text-emerald-400' : 'text-blue-400'
+                      }`}
+                    >
+                      <span className="opacity-50">[{new Date().toLocaleTimeString()}]</span>
+                      <span>{log.msg}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-gray-700 italic">No activity yet...</div>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Tips / Instructions */}
+            <div className="bg-blue-600/10 border border-blue-500/20 rounded-3xl p-6 relative overflow-hidden group">
+              <div className="absolute -right-8 -bottom-8 text-blue-500/10 group-hover:scale-110 transition-transform duration-500">
+                <Smartphone size={160} />
+              </div>
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-4 text-blue-400">
+                  <Monitor size={18} />
+                  <h3 className="text-sm font-bold uppercase tracking-widest">Setup Guide</h3>
+                </div>
+                <ul className="space-y-3 text-sm text-gray-300">
+                  <li className="flex gap-2">
+                    <span className="w-5 h-5 bg-blue-500/20 text-blue-400 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0">1</span>
+                    Run this app on your PC.
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="w-5 h-5 bg-blue-500/20 text-blue-400 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0">2</span>
+                    Open the local IP on your phone.
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="w-5 h-5 bg-blue-500/20 text-blue-400 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0">3</span>
+                    Add to Home Screen for full-screen experience.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {isConfigOpen && (
+        <CommandConfig
+          button={editingButton}
+          onSave={handleSaveButton}
+          onDelete={handleDeleteButton}
+          onCancel={() => {
+            setIsConfigOpen(false);
+            setIsAiMode(false);
+            setEditingButton(undefined);
+          }}
+          availablePositions={getAvailablePositions()}
+          autoFocusAI={isAiMode}
+        />
+      )}
+
+      {/* Footer / Connection Status */}
+      <footer className="mt-auto py-8 border-t border-gray-900">
+        <div className="max-w-5xl mx-auto px-4 text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-gray-900 border border-gray-800 rounded-full">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Host Connected: {window.location.hostname}</span>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+export default App;
