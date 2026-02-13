@@ -18,6 +18,7 @@ model User {
   createdAt  DateTime       @default(now())
   identities UserIdentity[]
   deckButtons DeckButton[]
+  decks      Deck[]
   isDeleted  Boolean        @default(false)
 
   @@index([email])
@@ -38,6 +39,21 @@ model UserIdentity {
   @@index([userId])
 }
 
+model Deck {
+  id        String   @id @default(uuid())
+  name      String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  buttons   DeckButton[]
+  rows      Int      @default(3)
+  cols      Int      @default(5)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  isDeleted Boolean  @default(false)
+
+  @@index([userId])
+}
+
 model DeckButton {
   id        String   @id @default(uuid())
   label     String
@@ -52,9 +68,12 @@ model DeckButton {
   col       Int
   userId    String?
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  deckId    String?
+  deck      Deck?    @relation(fields: [deckId], references: [id], onDelete: SetNull)
   isDeleted Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+  @@index([deckId])
 }

@@ -21,6 +21,19 @@ CREATE TABLE "UserIdentity" (
 );
 
 -- CreateTable
+CREATE TABLE "Deck" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "rows" INTEGER NOT NULL DEFAULT 3,
+    "cols" INTEGER NOT NULL DEFAULT 5,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    "isDeleted" BOOLEAN NOT NULL DEFAULT false,
+    CONSTRAINT "Deck_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
 CREATE TABLE "DeckButton" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "label" TEXT NOT NULL,
@@ -34,10 +47,12 @@ CREATE TABLE "DeckButton" (
     "row" INTEGER NOT NULL,
     "col" INTEGER NOT NULL,
     "userId" TEXT,
+    "deckId" TEXT,
     "isDeleted" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "DeckButton_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+    CONSTRAINT "DeckButton_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT "DeckButton_deckId_fkey" FOREIGN KEY ("deckId") REFERENCES "Deck" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateIndex
@@ -53,4 +68,10 @@ CREATE INDEX "UserIdentity_userId_idx" ON "UserIdentity"("userId");
 CREATE UNIQUE INDEX "UserIdentity_provider_providerId_key" ON "UserIdentity"("provider", "providerId");
 
 -- CreateIndex
+CREATE INDEX "Deck_userId_idx" ON "Deck"("userId");
+
+-- CreateIndex
 CREATE INDEX "DeckButton_userId_idx" ON "DeckButton"("userId");
+
+-- CreateIndex
+CREATE INDEX "DeckButton_deckId_idx" ON "DeckButton"("deckId");

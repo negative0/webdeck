@@ -22,14 +22,30 @@ const startBackend = async () => {
     
     // Setup Database
     const userDataPath = app.getPath('userData');
-    const dbPath = path.join(userDataPath, 'webdeck.db');
-    const initialDbPath = app.isPackaged 
-        ? path.join(process.resourcesPath, 'backend-dist/src/prisma/dev.db')
-        : path.join(__dirname, '../backend-dist/src/prisma/dev.db');
+    let dbPath = path.join(userDataPath, 'webdeck.db');
+    
+    // In development, use the desktop database directly to avoid copying
+    if (!app.isPackaged) {
+        // __dirname is dist/ (since we run from dist/main.js)
+        // ../../desktop/prisma/dev.db
+        const desktopDbPath = path.resolve(__dirname, '../prisma/dev.db');
+        if (fs.existsSync(desktopDbPath)) {
+            console.log('Using desktop database directly:', desktopDbPath);
+            dbPath = desktopDbPath;
+        } else {
+            console.warn('Desktop database not found at', desktopDbPath, 'falling back to userData copy');
+        }
+    }
 
-    if (!fs.existsSync(dbPath)) {
+    // Copy initial DB if needed (only if we are using the local userData copy)
+    if (dbPath === path.join(userDataPath, 'webdeck.db') && !fs.existsSync(dbPath)) {
+        const initialDbPath = app.isPackaged
+            ? path.join(process.resourcesPath, 'desktop/prisma/dev.db')
+            : path.join(__dirname, '../prisma/dev.db');
+
         if (fs.existsSync(initialDbPath)) {
              console.log('Copying initial database to', dbPath);
+             fs.mkdirSync(path.dirname(dbPath), { recursive: true });
              fs.copyFileSync(initialDbPath, dbPath);
         } else {
              console.log('Initial database not found at', initialDbPath);

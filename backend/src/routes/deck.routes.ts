@@ -25,6 +25,19 @@ deckRoutes.post('/', catchAsync(async (c) => {
   return c.json(result);
 }));
 
+deckRoutes.get('/list', catchAsync(async (c) => {
+  const userId = c.get('userId');
+  const decks = await deckService.getDecks(userId);
+  return c.json(decks);
+}));
+
+deckRoutes.post('/list', catchAsync(async (c) => {
+  const userId = c.get('userId');
+  const data = await c.req.json();
+  const deck = await deckService.createDeck(userId, data);
+  return c.json(deck);
+}));
+
 deckRoutes.post('/execute', catchAsync(async (c) => {
   const { command, type } = await c.req.json();
   
@@ -66,6 +79,39 @@ deckRoutes.post('/execute', catchAsync(async (c) => {
       stderr: error.stderr 
     }, 500);
   }
+}));
+
+deckRoutes.get('/:id', catchAsync(async (c) => {
+  const userId = c.get('userId');
+  const deckId = c.req.param('id');
+  const config = await deckService.getDeckConfig(userId, deckId);
+  return c.json(config);
+}));
+
+deckRoutes.post('/:id', catchAsync(async (c) => {
+  const userId = c.get('userId');
+  const deckId = c.req.param('id');
+  const config = await c.req.json();
+  if (!Array.isArray(config)) {
+    throw new ApiError(400, 'Invalid configuration format. Expected an array.');
+  }
+  const result = await deckService.saveDeckConfig(userId, config, deckId);
+  return c.json(result);
+}));
+
+deckRoutes.delete('/:id', catchAsync(async (c) => {
+  const userId = c.get('userId');
+  const deckId = c.req.param('id');
+  await deckService.deleteDeck(userId, deckId);
+  return c.json({ success: true });
+}));
+
+deckRoutes.put('/:id/metadata', catchAsync(async (c) => {
+  const userId = c.get('userId');
+  const deckId = c.req.param('id');
+  const data = await c.req.json();
+  const deck = await deckService.updateDeck(userId, deckId, data);
+  return c.json(deck);
 }));
 
 export default deckRoutes;

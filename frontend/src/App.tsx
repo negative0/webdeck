@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Settings, Plus, RefreshCw, Monitor, Smartphone, Terminal, Play, LogOut, Sparkles } from 'lucide-react';
+import { Layout, Settings, Plus, RefreshCw, Monitor, Smartphone, Terminal, Play, LogOut, Sparkles, Trash2 } from 'lucide-react';
 import { DeckGrid } from './components/DeckGrid';
 import { CommandConfig } from './components/CommandConfig';
 import { EmojiKeyboard } from './components/EmojiKeyboard';
-import { deckService, DeckButton } from './services/deck.service';
+import { deckService, DeckButton, Deck } from './services/deck.service';
 import { authService } from './services/auth.service';
 import { AuthPage } from './pages/AuthPage';
 import { DesktopDashboard } from './components/DesktopDashboard';
@@ -11,6 +11,8 @@ import { DesktopDashboard } from './components/DesktopDashboard';
 function App() {
   const [user, setUser] = useState(authService.getCurrentUser());
   const [buttons, setButtons] = useState<DeckButton[]>([]);
+  const [decks, setDecks] = useState<Deck[]>([]);
+  const [activeDeckId, setActiveDeckId] = useState<string | null>(null);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [editingButton, setEditingButton] = useState<DeckButton | undefined>();
   const [targetPosition, setTargetPosition] = useState<{ row: number; col: number } | undefined>();
@@ -25,14 +27,37 @@ function App() {
 
   useEffect(() => {
     if (user && !isElectron) {
-      fetchDeck();
+      loadDecks();
     }
   }, [user, isElectron]);
 
-  const fetchDeck = async () => {
+  const loadDecks = async () => {
     setIsLoading(true);
     try {
-      const data = await deckService.getDeckConfig();
+      const deckList = await deckService.getDecks();
+      setDecks(deckList);
+      if (deckList.length > 0) {
+        // If no active deck or active deck not in list, select first
+        if (!activeDeckId || !deckList.find(d => d.id === activeDeckId)) {
+          setActiveDeckId(deckList[0].id);
+          fetchDeck(deckList[0].id);
+        } else {
+          fetchDeck(activeDeckId);
+        }
+      }
+    } catch (error) {
+      addLog('Failed to load decks', 'error');
+      setIsLoading(false);
+    }
+  };
+
+  const fetchDeck = async (deckId?: string) => {
+    const targetId = deckId || activeDeckId;
+    if (!targetId) return;
+
+    setIsLoading(true);
+    try {
+      const data = await deckService.getDeckConfig(targetId);
       setButtons(data);
       addLog('Deck configuration loaded', 'info');
     } catch (error) {
@@ -80,6 +105,10 @@ function App() {
   };
 
   const handleSaveButton = async (button: DeckButton) => {
+    if (!activeDeckId) {
+      addLog('No deck selected', 'error');
+      return;
+    }
     const newButtons = [...buttons];
     const index = newButtons.findIndex((b) => b.id === button.id);
     
@@ -90,7 +119,7 @@ function App() {
     }
 
     try {
-      await deckService.saveDeckConfig(newButtons);
+      await deckService.saveDeckConfig(newButtons, activeDeckId);
       setButtons(newButtons);
       setIsConfigOpen(false);
       setIsAiMode(false);
@@ -103,9 +132,10 @@ function App() {
   };
 
   const handleDeleteButton = async (id: string) => {
+    if (!activeDeckId) return;
     const newButtons = buttons.filter((b) => b.id !== id);
     try {
-      await deckService.saveDeckConfig(newButtons);
+      await deckService.saveDeckConfig(newButtons, activeDeckId);
       setButtons(newButtons);
       setIsConfigOpen(false);
       setIsAiMode(false);
@@ -117,8 +147,37 @@ function App() {
     }
   };
 
-  const rows = 3;
-  const cols = 5;
+  const handleCreateDeck = async () => {
+    const name = prompt("Enter new deck name:");
+    if (!name) return;
+    try {
+      const newDeck = await deckService.createDeck(name);
+      setDecks([...decks, newDeck]);
+      setActiveDeckId(newDeck.id);
+      fetchDeck(newDeck.id);
+      addLog(`Deck "${name}" created`, 'success');
+    } catch (error) {
+      addLog('Failed to create deck', 'error');
+    }
+  };
+
+  const handleDeleteDeck = async () => {
+    if (!activeDeckId) return;
+    if (!confirm("Are you sure you want to delete this deck?")) return;
+    
+    try {
+        await deckService.deleteDeck(activeDeckId);
+        addLog('Deck deleted', 'success');
+        // Reload decks to pick a new one
+        loadDecks();
+    } catch (error) {
+        addLog('Failed to delete deck', 'error');
+    }
+  }
+
+  const activeDeck = decks.find(d => d.id === activeDeckId);
+  const rows = activeDeck?.rows || 3;
+  const cols = activeDeck?.cols || 5;
 
   const handleAddAtPosition = (row: number, col: number) => {
     if (activeTab === 'edit') {
@@ -144,6 +203,7 @@ function App() {
 
   const handleMoveButton = async (source: { row: number; col: number }, target: { row: number; col: number }) => {
     if (source.row === target.row && source.col === target.col) return;
+    if (!activeDeckId) return;
 
     const newButtons = [...buttons];
     const sourceBtnIndex = newButtons.findIndex((b) => b.row === source.row && b.col === source.col);
@@ -174,11 +234,11 @@ function App() {
     setButtons(newButtons);
 
     try {
-      await deckService.saveDeckConfig(newButtons);
+      await deckService.saveDeckConfig(newButtons, activeDeckId);
       addLog('Layout updated', 'success');
     } catch (error) {
       addLog('Failed to save layout', 'error');
-      fetchDeck();
+      fetchDeck(activeDeckId);
     }
   };
 
@@ -195,6 +255,36 @@ function App() {
             <div>
               <h1 className="text-xl font-black tracking-tight text-white">WebDeck</h1>
               <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Virtual Control Center</p>
+            </div>
+
+             {/* Deck Selector */}
+             <div className="ml-4 flex items-center gap-2">
+                <select 
+                    value={activeDeckId || ''} 
+                    onChange={(e) => {
+                        if (e.target.value === 'new') {
+                            handleCreateDeck();
+                        } else {
+                            setActiveDeckId(e.target.value);
+                            fetchDeck(e.target.value);
+                        }
+                    }}
+                    className="bg-gray-800 text-white text-sm rounded-lg border-none focus:ring-2 focus:ring-blue-500 py-1 pl-3 pr-8"
+                >
+                    {decks.map(deck => (
+                        <option key={deck.id} value={deck.id}>{deck.name}</option>
+                    ))}
+                    <option value="new">+ New Deck</option>
+                </select>
+                {activeDeckId && decks.length > 1 && (
+                    <button 
+                        onClick={handleDeleteDeck}
+                        className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                        title="Delete current deck"
+                    >
+                        <Trash2 size={16} />
+                    </button>
+                )}
             </div>
           </div>
 

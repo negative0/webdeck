@@ -5,10 +5,7 @@
     "main": "index.js",
     "type": "module",
     "scripts": {
-        "dev": "cross-env NODE_ENV=development DATABASE_URL=\"file:../../desktop/prisma/dev.db\" tsx watch ./src/index.ts",
-        "db:push": "cross-env NODE_ENV=development DATABASE_URL=\"file:../../desktop/prisma/dev.db\" prisma db push --schema=./src/prisma/schema.prisma",
-        "db:generate": "cross-env NODE_ENV=development DATABASE_URL=\"file:../../desktop/prisma/dev.db\" prisma generate --schema=./src/prisma/schema.prisma",
-        "db:studio": "cross-env NODE_ENV=development DATABASE_URL=\"file:../../desktop/prisma/dev.db\" prisma studio --schema=./src/prisma/schema.prisma",
+        "dev": "cross-env NODE_ENV=development && tsx watch ./src/index.ts",
         "typecheck": "tsc --noEmit",
         "build": "tsc",
         "eslint": "eslint . --ext .ts,.tsx --max-warnings 0",

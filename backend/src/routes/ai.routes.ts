@@ -52,7 +52,7 @@ TYPES:
 Respond ONLY with a JSON object in the following format:
 {
   "label": "Short Label",
-  "command": "terminal command or shortcut key",
+  "command": "terminal shell command compatible with (/bin/sh) or shortcut key",
   "type": "COMMAND" | "SHORTCUT",
   "icon": "LucideIconName",
   "color": "#HEXCODE",

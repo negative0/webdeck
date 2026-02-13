@@ -11,13 +11,14 @@ datasource db {
 
 // Auth models
 model User {
-  id         String         @id @default(uuid())
-  email      String         @unique
-  name       String?
-  createdAt  DateTime       @default(now())
-  identities UserIdentity[]
+  id          String         @id @default(uuid())
+  email       String         @unique
+  name        String?
+  createdAt   DateTime       @default(now())
+  identities  UserIdentity[]
   deckButtons DeckButton[]
-  isDeleted  Boolean        @default(false)
+  decks       Deck[]
+  isDeleted   Boolean        @default(false)
 
   @@index([email])
 }
@@ -37,23 +38,41 @@ model UserIdentity {
   @@index([userId])
 }
 
+model Deck {
+  id        String       @id @default(uuid())
+  name      String
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  buttons   DeckButton[]
+  rows      Int          @default(3)
+  cols      Int          @default(5)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  isDeleted Boolean      @default(false)
+
+  @@index([userId])
+}
+
 model DeckButton {
-  id        String   @id @default(uuid())
-  label     String
-  icon      String?
-  command   String
-  type      String   @default("COMMAND") // "COMMAND" or "SHORTCUT"
+  id           String   @id @default(uuid())
+  label        String
+  icon         String?
+  command      String
+  type         String   @default("COMMAND") // "COMMAND" or "SHORTCUT"
   checkCommand String?
   activeIcon   String?
   activeLabel  String?
-  color     String?
-  row       Int
-  col       Int
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  isDeleted Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  color        String?
+  row          Int
+  col          Int
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  deckId       String?
+  deck         Deck?    @relation(fields: [deckId], references: [id], onDelete: SetNull)
+  isDeleted    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([userId])
+  @@index([deckId])
 }
