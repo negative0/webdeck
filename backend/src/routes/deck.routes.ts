@@ -34,9 +34,14 @@ deckRoutes.post('/execute', catchAsync(async (c) => {
 
   let finalCommand = command;
   if (type === 'SHORTCUT') {
-    // Assuming xdotool is available for Linux. 
-    // For other OS, this would need different implementation.
-    finalCommand = `xdotool key ${command}`;
+    if (process.platform === 'darwin') {
+      // Escape for AppleScript and Shell
+      const safeCommand = command.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/'/g, "'\\''");
+      finalCommand = `osascript -e 'tell application "System Events" to keystroke "${safeCommand}"'`;
+    } else {
+      // Linux/X11 implementation
+      finalCommand = `xdotool key ${command}`;
+    }
   }
 
   try {

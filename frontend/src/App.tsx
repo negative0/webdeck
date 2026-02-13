@@ -136,6 +136,46 @@ function App() {
     return positions;
   };
 
+  const handleMoveButton = async (source: { row: number; col: number }, target: { row: number; col: number }) => {
+    if (source.row === target.row && source.col === target.col) return;
+
+    const newButtons = [...buttons];
+    const sourceBtnIndex = newButtons.findIndex((b) => b.row === source.row && b.col === source.col);
+    const targetBtnIndex = newButtons.findIndex((b) => b.row === target.row && b.col === target.col);
+
+    if (sourceBtnIndex === -1) return;
+
+    // Optimistic update
+    const sourceBtn = { ...newButtons[sourceBtnIndex] };
+
+    if (targetBtnIndex !== -1) {
+      // Swap
+      const targetBtn = { ...newButtons[targetBtnIndex] };
+      sourceBtn.row = target.row;
+      sourceBtn.col = target.col;
+      targetBtn.row = source.row;
+      targetBtn.col = source.col;
+
+      newButtons[sourceBtnIndex] = sourceBtn;
+      newButtons[targetBtnIndex] = targetBtn;
+    } else {
+      // Move to empty
+      sourceBtn.row = target.row;
+      sourceBtn.col = target.col;
+      newButtons[sourceBtnIndex] = sourceBtn;
+    }
+
+    setButtons(newButtons);
+
+    try {
+      await deckService.saveDeckConfig(newButtons);
+      addLog('Layout updated', 'success');
+    } catch (error) {
+      addLog('Failed to save layout', 'error');
+      fetchDeck();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-gray-100 font-sans selection:bg-blue-500/30 relative">
       <div className="absolute inset-0 bg-dot-pattern pointer-events-none"></div>
@@ -253,10 +293,11 @@ function App() {
                 <p className="font-medium">Connecting to Host...</p>
               </div>
             ) : (
-              <div className={activeTab === 'edit' ? 'opacity-75' : ''}>
+              <div className={activeTab === 'edit' ? '' : ''}>
                 <DeckGrid
                   buttons={buttons}
-                  onAdd={handleAddAtPosition}
+                  onAdd={activeTab === 'edit' ? handleAddAtPosition : undefined}
+                  onMove={activeTab === 'edit' ? handleMoveButton : undefined}
                   onExecute={(cmd, type) => {
                     if (activeTab === 'edit') {
                       const btn = buttons.find(b => b.command === cmd && b.type === type);

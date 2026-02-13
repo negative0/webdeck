@@ -7,6 +7,7 @@ interface DeckGridProps {
   buttons: IDeckButton[];
   onExecute: (command: string, type: 'COMMAND' | 'SHORTCUT') => void;
   onAdd?: (row: number, col: number) => void;
+  onMove?: (source: { row: number; col: number }, target: { row: number; col: number }) => void;
   rows?: number;
   cols?: number;
 }
@@ -15,10 +16,12 @@ export const DeckGrid: React.FC<DeckGridProps> = ({
   buttons,
   onExecute,
   onAdd,
+  onMove,
   rows = 3,
   cols = 5,
 }) => {
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [dragOverCell, setDragOverCell] = useState<{ row: number; col: number } | null>(null);
   const wakeLockRef = useRef<any>(null);
 
   useEffect(() => {
@@ -123,26 +126,85 @@ export const DeckGrid: React.FC<DeckGridProps> = ({
         }}
       >
         {grid.flatMap((row, rIdx) =>
-          row.map((button, cIdx) => (
-            <div key={`${rIdx}-${cIdx}`} className="aspect-square">
-              {button ? (
-                <DeckButton
-                  label={button.label}
-                  icon={button.icon}
-                  color={button.color}
-                  onClick={() => onExecute(button.command, button.type)}
-                  className="w-full h-full"
-                />
-              ) : (
-                <button 
-                  onClick={() => onAdd?.(rIdx, cIdx)}
-                  className="w-full h-full rounded-xl border-2 border-dashed border-gray-800 flex items-center justify-center text-gray-700 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all group"
-                >
-                  <span className="text-[10px] uppercase tracking-widest font-bold group-hover:text-blue-500">Empty</span>
-                </button>
-              )}
-            </div>
-          ))
+          row.map((button, cIdx) => {
+            const isDragOver = dragOverCell?.row === rIdx && dragOverCell?.col === cIdx;
+            
+            return (
+              <div 
+                key={`${rIdx}-${cIdx}`} 
+                className={`aspect-square relative transition-all duration-200 ${
+                  isDragOver ? 'scale-105 z-10' : ''
+                }`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                }}
+                onDragEnter={(e) => {
+                  e.preventDefault();
+                  if (onMove) setDragOverCell({ row: rIdx, col: cIdx });
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  // Check if we're actually leaving the cell logic if needed, 
+                  // but simplest is to let the next onDragEnter handle the switch
+                  // or clear it if we leave the grid entirely (handled by container if needed)
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOverCell(null);
+                  if (!onMove) return;
+                  
+                  try {
+                    const data = e.dataTransfer.getData('application/json');
+                    if (data) {
+                      const source = JSON.parse(data);
+                      if (source.row !== rIdx || source.col !== cIdx) {
+                        onMove(source, { row: rIdx, col: cIdx });
+                      }
+                    }
+                  } catch (err) {
+                    console.error('Drop error:', err);
+                  }
+                }}
+              >
+                {button ? (
+                  <div
+                    draggable={!!onMove}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('application/json', JSON.stringify({ row: rIdx, col: cIdx }));
+                      e.dataTransfer.effectAllowed = 'move';
+                    }}
+                    onDragEnd={() => {
+                      setDragOverCell(null);
+                    }}
+                    className={`w-full h-full ${onMove ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                  >
+                    <DeckButton
+                      label={button.label}
+                      icon={button.icon}
+                      color={button.color}
+                      onClick={() => onExecute(button.command, button.type)}
+                      className={`w-full h-full ${isDragOver ? 'ring-2 ring-blue-500 rounded-xl' : ''} ${onMove ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                    />
+                  </div>
+                ) : (
+                  <button 
+                    disabled={!onAdd}
+                    onClick={() => onAdd?.(rIdx, cIdx)}
+                    className={`w-full h-full rounded-xl border-2 border-dashed flex items-center justify-center transition-all group ${
+                      isDragOver 
+                        ? 'border-blue-500 bg-blue-500/10 text-blue-500' 
+                        : (onAdd ? 'border-gray-800 text-gray-700 hover:border-blue-500/50 hover:bg-blue-500/5 cursor-pointer' : 'border-gray-800/30 text-transparent cursor-default')
+                    }`}
+                  >
+                    <span className={`text-[10px] uppercase tracking-widest font-bold ${onAdd ? 'group-hover:text-blue-500' : ''}`}>
+                      {isDragOver ? 'Drop Here' : (onAdd ? 'Empty' : '')}
+                    </span>
+                  </button>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
 

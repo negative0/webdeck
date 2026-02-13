@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { deckService, DeckButton as IDeckButton } from '../services/deck.service';
+import { PresetSelector } from './PresetSelector';
+import { MAC_OS_PRESETS } from '../constants/macOsCommands';
 import * as LucideIcons from 'lucide-react';
-import { X, Save, Trash2, Plus, Sparkles, Loader2 } from 'lucide-react';
+import { X, Save, Trash2, Plus, Sparkles, Loader2, List } from 'lucide-react';
 
 const getRandomId = () => {
   return Math.random().toString(36).substring(2, 15);
@@ -42,6 +44,7 @@ export const CommandConfig: React.FC<CommandConfigProps> = ({
   );
   const [aiPrompt, setAiPrompt] = useState('');
   const [isSuggesting, setIsSuggesting] = useState(false);
+  const [showPresetSelector, setShowPresetSelector] = useState(false);
   const aiInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
@@ -71,6 +74,17 @@ export const CommandConfig: React.FC<CommandConfigProps> = ({
     }
   };
 
+  const handlePresetSelect = (preset: typeof MAC_OS_PRESETS[0]['items'][0]) => {
+    setFormData({
+      ...formData,
+      label: preset.label,
+      command: preset.command,
+      type: preset.type as any,
+      icon: preset.icon,
+      color: formData.color,
+    });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave(formData);
@@ -89,6 +103,19 @@ export const CommandConfig: React.FC<CommandConfigProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+          {/* Quick Actions */}
+          <div className="flex gap-2 mb-2">
+             <button
+              type="button"
+              onClick={() => setShowPresetSelector(true)}
+              className="flex-1 bg-gradient-to-r from-purple-900/40 to-blue-900/40 border border-purple-500/30 hover:border-purple-400/50 
+                       text-purple-200 hover:text-white p-3 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 group"
+            >
+              <List size={18} className="group-hover:scale-110 transition-transform" />
+              <span className="font-medium">Browse Presets</span>
+            </button>
+          </div>
+
           {/* AI Suggestion Section */}
           <div className="bg-blue-600/10 border border-blue-500/20 rounded-2xl p-4 space-y-3">
             <label className="block text-xs font-bold text-blue-400 uppercase tracking-widest">AI Command Generator</label>
@@ -258,6 +285,13 @@ export const CommandConfig: React.FC<CommandConfigProps> = ({
           )}
         </div>
       </div>
+      
+      {/* Preset Selector Modal */}
+      <PresetSelector 
+        isOpen={showPresetSelector} 
+        onClose={() => setShowPresetSelector(false)} 
+        onSelect={handlePresetSelect} 
+      />
     </div>
   );
 };
