@@ -20,7 +20,7 @@ interface CommandConfigProps {
 
 const ICON_LIST = Object.keys(LucideIcons).filter(
   (key) => typeof (LucideIcons as any)[key] === 'function' && key !== 'createLucideIcon'
-).slice(0, 50); // Limit icons for performance and simplicity
+);
 
 export const CommandConfig: React.FC<CommandConfigProps> = ({
   button,
@@ -43,6 +43,7 @@ export const CommandConfig: React.FC<CommandConfigProps> = ({
     }
   );
   const [aiPrompt, setAiPrompt] = useState('');
+  const [iconSearch, setIconSearch] = useState('');
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [showPresetSelector, setShowPresetSelector] = useState(false);
   const aiInputRef = React.useRef<HTMLInputElement>(null);
@@ -139,11 +140,11 @@ export const CommandConfig: React.FC<CommandConfigProps> = ({
             </div>
           </div>
 
-          <div className="flex gap-2 p-1 bg-gray-800 rounded-xl border border-gray-700">
+          <div className="flex gap-2 p-1 bg-gray-800 rounded-xl border border-gray-700 overflow-x-auto">
             <button
               type="button"
               onClick={() => setFormData({ ...formData, type: 'COMMAND' })}
-              className={`flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all ${
+              className={`flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
                 formData.type === 'COMMAND'
                   ? 'bg-gray-700 text-white shadow-lg'
                   : 'text-gray-400 hover:text-gray-300'
@@ -154,7 +155,7 @@ export const CommandConfig: React.FC<CommandConfigProps> = ({
             <button
               type="button"
               onClick={() => setFormData({ ...formData, type: 'SHORTCUT' })}
-              className={`flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all ${
+              className={`flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
                 formData.type === 'SHORTCUT'
                   ? 'bg-gray-700 text-white shadow-lg'
                   : 'text-gray-400 hover:text-gray-300'
@@ -162,33 +163,62 @@ export const CommandConfig: React.FC<CommandConfigProps> = ({
             >
               Shortcut
             </button>
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, type: 'EMOJI_KEYBOARD', command: 'OPEN_EMOJI', icon: 'Smile', label: 'Emojis' })}
+              className={`flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
+                formData.type === 'EMOJI_KEYBOARD'
+                  ? 'bg-gray-700 text-white shadow-lg'
+                  : 'text-gray-400 hover:text-gray-300'
+              }`}
+            >
+              Emoji
+            </button>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">Label</label>
-            <input
-              type="text"
-              required
-              className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-              value={formData.label}
-              onChange={(e) => setFormData({ ...formData, label: e.target.value })}
-              placeholder="e.g. Open Browser"
-            />
-          </div>
+          {formData.type !== 'EMOJI_KEYBOARD' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Label</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  value={formData.label}
+                  onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+                  placeholder="e.g. Open Browser"
+                />
+              </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">
-              {formData.type === 'COMMAND' ? 'Shell Command' : 'Shortcut (e.g. F5, ctrl+c)'}
-            </label>
-            <textarea
-              required
-              className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono text-sm"
-              rows={formData.type === 'COMMAND' ? 3 : 1}
-              value={formData.command}
-              onChange={(e) => setFormData({ ...formData, command: e.target.value })}
-              placeholder={formData.type === 'COMMAND' ? 'e.g. google-chrome' : 'e.g. F5'}
-            />
-          </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">
+                  {formData.type === 'COMMAND' ? 'Shell Command' : 'Shortcut (e.g. F5, ctrl+c)'}
+                </label>
+                <textarea
+                  required
+                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono text-sm"
+                  rows={formData.type === 'COMMAND' ? 3 : 1}
+                  value={formData.command}
+                  onChange={(e) => setFormData({ ...formData, command: e.target.value })}
+                  placeholder={formData.type === 'COMMAND' ? 'e.g. google-chrome' : 'e.g. F5'}
+                />
+              </div>
+            </>
+          )}
+
+          {formData.type === 'EMOJI_KEYBOARD' && (
+             <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Label</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  value={formData.label}
+                  onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+                  placeholder="e.g. Emojis"
+                />
+              </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -246,8 +276,18 @@ export const CommandConfig: React.FC<CommandConfigProps> = ({
 
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-1">Icon</label>
+            <input
+              type="text"
+              className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2 transition-all"
+              placeholder="Search icons..."
+              value={iconSearch}
+              onChange={(e) => setIconSearch(e.target.value)}
+            />
             <div className="grid grid-cols-5 gap-2 h-32 overflow-y-auto p-2 bg-gray-800 rounded-xl border border-gray-700">
-              {ICON_LIST.map((iconName) => {
+              {ICON_LIST
+                .filter((icon) => icon.toLowerCase().includes(iconSearch.toLowerCase()))
+                .slice(0, 100)
+                .map((iconName) => {
                 const Icon = (LucideIcons as any)[iconName];
                 return (
                   <button
@@ -257,6 +297,7 @@ export const CommandConfig: React.FC<CommandConfigProps> = ({
                     className={`p-2 rounded-lg flex items-center justify-center transition-colors ${
                       formData.icon === iconName ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-700'
                     }`}
+                    title={iconName}
                   >
                     <Icon size={20} />
                   </button>

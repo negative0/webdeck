@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Layout, Settings, Plus, RefreshCw, Monitor, Smartphone, Terminal, Play, LogOut, Sparkles } from 'lucide-react';
 import { DeckGrid } from './components/DeckGrid';
 import { CommandConfig } from './components/CommandConfig';
+import { EmojiKeyboard } from './components/EmojiKeyboard';
 import { deckService, DeckButton } from './services/deck.service';
 import { authService } from './services/auth.service';
 import { AuthPage } from './pages/AuthPage';
@@ -16,6 +17,7 @@ function App() {
   const [isAiMode, setIsAiMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'control' | 'edit'>('control');
+  const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [logs, setLogs] = useState<{ msg: string; type: 'success' | 'error' | 'info' }[]>([]);
 
   // Check if running in Electron
@@ -60,6 +62,10 @@ function App() {
 
 
   const handleExecute = async (command: string, type: string = 'COMMAND') => {
+    if (type === 'EMOJI_KEYBOARD') {
+      setIsEmojiOpen(true);
+      return;
+    }
     addLog(`Executing ${type}: ${command}`, 'info');
     try {
       const result = await deckService.executeCommand(command, type);
@@ -298,17 +304,14 @@ function App() {
                   buttons={buttons}
                   onAdd={activeTab === 'edit' ? handleAddAtPosition : undefined}
                   onMove={activeTab === 'edit' ? handleMoveButton : undefined}
-                  onExecute={(cmd, type) => {
+                  onExecute={(btn) => {
                     if (activeTab === 'edit') {
-                      const btn = buttons.find(b => b.command === cmd && b.type === type);
-                      if (btn) {
-                        setEditingButton(btn);
-                        setTargetPosition(undefined);
-                        setIsAiMode(false);
-                        setIsConfigOpen(true);
-                      }
+                      setEditingButton(btn);
+                      setTargetPosition(undefined);
+                      setIsAiMode(false);
+                      setIsConfigOpen(true);
                     } else {
-                      handleExecute(cmd, type);
+                      handleExecute(btn.command, btn.type);
                     }
                   }}
                   rows={rows}
@@ -415,6 +418,16 @@ function App() {
           }}
           availablePositions={getAvailablePositions()}
           autoFocusAI={isAiMode}
+        />
+      )}
+
+      {isEmojiOpen && (
+        <EmojiKeyboard 
+          onEmojiClick={(emojiData) => {
+            handleExecute(emojiData.emoji, 'PASTE');
+            setIsEmojiOpen(false);
+          }}
+          onClose={() => setIsEmojiOpen(false)}
         />
       )}
 

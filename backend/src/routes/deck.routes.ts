@@ -33,6 +33,7 @@ deckRoutes.post('/execute', catchAsync(async (c) => {
   }
 
   let finalCommand = command;
+
   if (type === 'SHORTCUT') {
     if (process.platform === 'darwin') {
       // Escape for AppleScript and Shell
@@ -40,7 +41,16 @@ deckRoutes.post('/execute', catchAsync(async (c) => {
       finalCommand = `osascript -e 'tell application "System Events" to keystroke "${safeCommand}"'`;
     } else {
       // Linux/X11 implementation
-      finalCommand = `xdotool key ${command}`;
+      finalCommand = `xdotool key "${command}"`;
+    }
+  } else if (type === 'PASTE') {
+    if (process.platform === 'darwin') {
+      // Escape for AppleScript and Shell
+      const safeCommand = command.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/'/g, "'\\''");
+      finalCommand = `osascript -e 'set the clipboard to "${safeCommand}"' -e 'tell application "System Events" to keystroke "v" using command down'`;
+    } else {
+      // Linux/X11 implementation
+      finalCommand = `xdotool type --delay 50 "${command}"`;
     }
   }
 

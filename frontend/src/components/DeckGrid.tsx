@@ -5,7 +5,7 @@ import { DeckButton as IDeckButton } from '../services/deck.service';
 
 interface DeckGridProps {
   buttons: IDeckButton[];
-  onExecute: (command: string, type: 'COMMAND' | 'SHORTCUT') => void;
+  onExecute: (button: IDeckButton) => void;
   onAdd?: (row: number, col: number) => void;
   onMove?: (source: { row: number; col: number }, target: { row: number; col: number }) => void;
   rows?: number;
@@ -183,7 +183,7 @@ export const DeckGrid: React.FC<DeckGridProps> = ({
                       label={button.label}
                       icon={button.icon}
                       color={button.color}
-                      onClick={() => onExecute(button.command, button.type)}
+                      onClick={() => onExecute(button)}
                       className={`w-full h-full ${isDragOver ? 'ring-2 ring-blue-500 rounded-xl' : ''} ${onMove ? 'cursor-grab active:cursor-grabbing' : ''}`}
                     />
                   </div>
@@ -237,7 +237,7 @@ export const DeckGrid: React.FC<DeckGridProps> = ({
                       label={button.label}
                       icon={button.icon}
                       color={button.color}
-                      onClick={() => onExecute(button.command, button.type)}
+                      onClick={() => onExecute(button)}
                       className="w-full h-full text-lg shadow-none"
                     />
                   ) : (

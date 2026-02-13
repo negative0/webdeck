@@ -5,7 +5,7 @@ export interface DeckButton {
   label: string;
   icon?: string;
   command: string;
-  type: 'COMMAND' | 'SHORTCUT';
+  type: 'COMMAND' | 'SHORTCUT' | 'EMOJI_KEYBOARD';
   color?: string;
   row: number;
   col: number;
