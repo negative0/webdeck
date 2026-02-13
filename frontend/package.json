@@ -9,7 +9,7 @@
         "eslint": "eslint . --ext .ts,.tsx --fix --max-warnings 0",
         "preview": "vite preview",
         "prettier": "prettier . --write --ignore-unknown",
-        "serve:dist": "serve -s dist -p 5000"
+        "serve:dist": "serve -s dist -p 5003"
     },
     "dependencies": {
         "@ai-sdk/react": "3.0.79",

@@ -1,0 +1,83 @@
+{
+  "name": "webdeck-desktop",
+  "version": "1.0.0",
+  "description": "WebDeck Desktop Application",
+  "main": "dist/main.js",
+  "type": "module",
+  "scripts": {
+    "start": "electron .",
+    "dev": "npm run build:backend && npm run build:electron && electron .",
+    "build": "npm run build:frontend && npm run build:backend && npm run build:electron",
+    "build:electron": "node scripts/build.cjs",
+    "build:frontend": "cd ../frontend && VITE_API_BASE_URL=http://localhost:3333 npm run build && rm -rf ../desktop/frontend-dist && mkdir -p ../desktop/frontend-dist && cp -r dist/* ../desktop/frontend-dist/",
+    "build:backend": "node scripts/prepare-backend.cjs",
+    "dist": "npm run build && electron-builder",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.38",
+    "@ai-sdk/google": "^3.0.22",
+    "@ai-sdk/openai": "^3.0.26",
+    "@aws-sdk/client-s3": "^3.626.0",
+    "@aws-sdk/s3-request-presigner": "^3.626.0",
+    "@azure/identity": "^4.8.0",
+    "@azure/storage-blob": "^12.28.0",
+    "@google-cloud/storage": "^6.12.0",
+    "@hono/node-server": "^1.19.9",
+    "@hono/zod-validator": "^0.7.6",
+    "@prisma/client": "^6.16.1",
+    "ai": "^6.0.77",
+    "bcrypt": "^5.1.1",
+    "better-sqlite3": "^9.4.0",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.4.5",
+    "hono": "^4.11.4",
+    "jsonwebtoken": "^9.0.2",
+    "stripe": "^14.19.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "electron": "^29.1.0",
+    "electron-builder": "^24.13.3",
+    "esbuild": "^0.20.1",
+    "prebuild-install": "^7.1.1",
+    "prisma": "^6.16.1",
+    "typescript": "^5.3.3"
+  },
+  "build": {
+    "appId": "com.webdeck.app",
+    "productName": "WebDeck",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "backend-dist/**/*",
+      "frontend-dist/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "backend-dist/src/generated/prisma",
+        "to": "backend/prisma",
+        "filter": [
+          "*.node",
+          "schema.prisma"
+        ]
+      },
+      "backend-dist/src/prisma/dev.db"
+    ],
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.productivity"
+    },
+    "asarUnpack": [
+      "frontend-dist/**/*",
+      "backend-dist/**/*",
+      "node_modules/@prisma/client/**/*",
+      "node_modules/prisma/**/*"
+    ]
+  }
+}

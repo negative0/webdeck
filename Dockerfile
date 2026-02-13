@@ -11,6 +11,7 @@ RUN pnpm build
 
 # Stage 2: Build Backend
 FROM node:20-slim AS backend-builder
+RUN apt-get update -y && apt-get install -y openssl
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
@@ -23,6 +24,7 @@ RUN pnpm build
 
 # Stage 3: Runtime
 FROM node:20-slim
+RUN apt-get update -y && apt-get install -y openssl
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable

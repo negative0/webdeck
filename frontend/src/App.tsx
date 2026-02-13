@@ -5,6 +5,7 @@ import { CommandConfig } from './components/CommandConfig';
 import { deckService, DeckButton } from './services/deck.service';
 import { authService } from './services/auth.service';
 import { AuthPage } from './pages/AuthPage';
+import { DesktopDashboard } from './components/DesktopDashboard';
 
 function App() {
   const [user, setUser] = useState(authService.getCurrentUser());
@@ -17,11 +18,14 @@ function App() {
   const [activeTab, setActiveTab] = useState<'control' | 'edit'>('control');
   const [logs, setLogs] = useState<{ msg: string; type: 'success' | 'error' | 'info' }[]>([]);
 
+  // Check if running in Electron
+  const isElectron = !!window.electron;
+
   useEffect(() => {
-    if (user) {
+    if (user && !isElectron) {
       fetchDeck();
     }
-  }, [user]);
+  }, [user, isElectron]);
 
   const fetchDeck = async () => {
     setIsLoading(true);
@@ -46,9 +50,14 @@ function App() {
     setLogs((prev) => [{ msg, type }, ...prev].slice(0, 5));
   };
 
+  if (isElectron) {
+    return <DesktopDashboard />;
+  }
+
   if (!user) {
     return <AuthPage onAuthSuccess={() => setUser(authService.getCurrentUser())} />;
   }
+
 
   const handleExecute = async (command: string, type: string = 'COMMAND') => {
     addLog(`Executing ${type}: ${command}`, 'info');

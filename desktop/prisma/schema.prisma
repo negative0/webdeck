@@ -1,0 +1,56 @@
+// This is your Prisma schema file,
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "darwin", "darwin-arm64"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Auth models
+model User {
+  id         String         @id @default(uuid())
+  email      String         @unique
+  name       String?
+  createdAt  DateTime       @default(now())
+  identities UserIdentity[]
+  deckButtons DeckButton[]
+  isDeleted  Boolean        @default(false)
+
+  @@index([email])
+}
+
+model UserIdentity {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider   String // 'Google', 'GitHub', 'EmailPassword', 'PhoneOTP', etc.
+  providerId String // Provider's unique user ID (or email for email/password)
+  metadata   Json? // Provider-specific data (passwordHash, tokens, profile data, etc.)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  isDeleted  Boolean  @default(false)
+
+  @@unique([provider, providerId])
+  @@index([userId])
+}
+
+model DeckButton {
+  id        String   @id @default(uuid())
+  label     String
+  icon      String?
+  command   String
+  type      String   @default("COMMAND") // "COMMAND" or "SHORTCUT"
+  color     String?
+  row       Int
+  col       Int
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}

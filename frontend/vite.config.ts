@@ -27,14 +27,14 @@ const config: UserConfigFn = ({ mode }) => {
         server: {
             allowedHosts: process.env.ALLOWED_HOSTS?.split(',') || true,
             host: '0.0.0.0',
-            port: parseInt(process.env.PORT!) || 5000,
+            port: parseInt(process.env.PORT!) || 5003,
             strictPort: true, // Don't try alternative ports, fail if port is occupied
             watch: {
                 ignored: ['node_modules']
             },
             hmr: false
         },
-        base: '/',
+        base: './',
         resolve: {
             alias: {
                 '@': path.resolve(__dirname, './src')

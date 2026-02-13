@@ -87,7 +87,7 @@ stop_server() {
     fi
 
     # Step 4: Cleanup any orphaned processes on the port
-    kill_port 5000
+    kill_port 5003
 
     echo "Previous server process (PID: $KILLED_PID) killed."
 }

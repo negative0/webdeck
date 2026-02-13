@@ -31,7 +31,7 @@ RUN pnpm build
 # Remove dev dependencies to reduce image size
 RUN pnpm prune --production
 
-EXPOSE 5000
+EXPOSE 5003
 
 # Set production environment
 ENV NODE_ENV=production
