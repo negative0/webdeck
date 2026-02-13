@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Maximize2, X } from 'lucide-react';
 import { DeckButton } from './DeckButton';
 import { DeckButton as IDeckButton } from '../services/deck.service';
@@ -19,27 +19,80 @@ export const DeckGrid: React.FC<DeckGridProps> = ({
   cols = 5,
 }) => {
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const wakeLockRef = useRef<any>(null);
 
   useEffect(() => {
     const handleFullScreenChange = () => {
       if (!document.fullscreenElement) {
         setIsFullScreen(false);
+        // Release wake lock
+        if (wakeLockRef.current) {
+          wakeLockRef.current.release().catch(() => {});
+          wakeLockRef.current = null;
+        }
+        // Unlock orientation
+        if (screen.orientation && 'unlock' in screen.orientation) {
+          (screen.orientation as any).unlock();
+        }
       }
     };
 
     document.addEventListener('fullscreenchange', handleFullScreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullScreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullScreenChange);
+      // Cleanup wake lock on unmount
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release().catch(() => {});
+      }
+    };
   }, []);
 
-  const handleEnterFullScreen = () => {
-    setIsFullScreen(true);
-    document.documentElement.requestFullscreen().catch((e) => console.log(e));
+  const handleEnterFullScreen = async () => {
+    try {
+      await document.documentElement.requestFullscreen();
+      setIsFullScreen(true);
+      
+      // Request wake lock
+      if ('wakeLock' in navigator) {
+        try {
+          wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+        } catch (err) {
+          console.error('Wake Lock error:', err);
+        }
+      }
+
+      // Lock orientation to landscape
+      if (screen.orientation && 'lock' in screen.orientation) {
+        try {
+          await (screen.orientation as any).lock('landscape');
+        } catch (err) {
+          console.error('Orientation Lock error:', err);
+        }
+      }
+    } catch (e) {
+      console.log(e);
+    }
   };
 
-  const handleExitFullScreen = () => {
-    setIsFullScreen(false);
-    if (document.fullscreenElement) {
-      document.exitFullscreen().catch((e) => console.log(e));
+  const handleExitFullScreen = async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      }
+      setIsFullScreen(false);
+      
+      // Release wake lock
+      if (wakeLockRef.current) {
+        await wakeLockRef.current.release();
+        wakeLockRef.current = null;
+      }
+      
+      // Unlock orientation
+      if (screen.orientation && 'unlock' in screen.orientation) {
+        (screen.orientation as any).unlock();
+      }
+    } catch (e) {
+      console.log(e);
     }
   };
 
