@@ -4,7 +4,15 @@ export const MAC_OS_PRESETS = [
     items: [
       { label: 'Mute', command: 'osascript -e "set volume output muted true"', icon: 'VolumeX', type: 'COMMAND' },
       { label: 'Unmute', command: 'osascript -e "set volume output muted false"', icon: 'Volume2', type: 'COMMAND' },
-      { label: 'Toggle Mute', command: 'osascript -e "set volume output muted not (output muted of (get volume settings))"', icon: 'Volume', type: 'COMMAND' },
+      { 
+        label: 'Mute', 
+        command: 'osascript -e "set volume output muted not (output muted of (get volume settings))"', 
+        icon: 'Volume2', 
+        type: 'COMMAND',
+        checkCommand: 'osascript -e "output muted of (get volume settings)"',
+        activeIcon: 'VolumeX',
+        activeLabel: 'Unmute'
+      },
       { label: 'Volume Up (+10)', command: 'osascript -e "set volume output volume (output volume of (get volume settings) + 10)"', icon: 'Volume2', type: 'COMMAND' },
       { label: 'Volume Down (-10)', command: 'osascript -e "set volume output volume (output volume of (get volume settings) - 10)"', icon: 'Volume1', type: 'COMMAND' },
       { label: 'Sleep Display', command: 'pmset displaysleepnow', icon: 'Moon', type: 'COMMAND' },
@@ -47,6 +55,12 @@ export const MAC_OS_PRESETS = [
       { label: 'Spotify', command: 'open -a "Spotify"', icon: 'Music', type: 'COMMAND' },
       { label: 'Slack', command: 'open -a "Slack"', icon: 'MessageSquare', type: 'COMMAND' },
       { label: 'System Settings', command: 'open -a "System Settings"', icon: 'Settings', type: 'COMMAND' },
+    ]
+  },
+  {
+    category: 'Random',
+    items: [
+        { label: 'Inspiration', command: 'quote=$(curl -s https://zenquotes.io/api/random | grep -o \'"q":"[^"]*\' | cut -d\'"\' -f4); osascript -e "display notification \\"$quote\\" with title \\"Inspiration\\""', icon: 'Lightbulb', type: 'COMMAND' },
     ]
   }
 ];

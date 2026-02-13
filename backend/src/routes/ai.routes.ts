@@ -55,10 +55,13 @@ Respond ONLY with a JSON object in the following format:
   "command": "terminal command or shortcut key",
   "type": "COMMAND" | "SHORTCUT",
   "icon": "LucideIconName",
-  "color": "#HEXCODE"
+  "color": "#HEXCODE",
+  "checkCommand": "optional shell command returning 'true' or '1' if active",
+  "activeIcon": "optional icon when active",
+  "activeLabel": "optional label when active"
 }
 
-Common Lucide icons: Chrome, Terminal, Music, Volume2, Monitor, Cpu, Power, Globe, Folder, Play, Pause, SkipForward, SkipBack, Image, Mail, Github, Code, Hash, Command, Shield, Settings, Database, Cloud, Zap, Flame, Heart, Star.
+Common Lucide icons: Chrome, Terminal, Music, Volume2, Monitor, Cpu, Power, Globe, Folder, Play, Pause, SkipForward, SkipBack, Image, Mail, Github, Code, Hash, Command, Shield, Settings, Database, Cloud, Zap, Flame, Heart, Star, Mic, MicOff, Video, VideoOff.
 
 Example:
 User: "Open Chrome"
@@ -66,6 +69,9 @@ Response: { "label": "Chrome", "command": "google-chrome", "type": "COMMAND", "i
 
 User: "Refresh page"
 Response: { "label": "Refresh", "command": "F5", "type": "SHORTCUT", "icon": "RefreshCw", "color": "#3B82F6" }
+
+User: "Toggle Mute"
+Response: { "label": "Mute", "command": "amixer set Master toggle", "type": "COMMAND", "icon": "Mic", "color": "#EF4444", "checkCommand": "amixer get Master | grep '\\[off\\]'", "activeIcon": "MicOff", "activeLabel": "Unmute" }
 `;
 
     const result = await llm.generateText({

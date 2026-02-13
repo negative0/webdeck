@@ -2,10 +2,14 @@ import React from 'react';
 import * as LucideIcons from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { useButtonState } from '../hooks/useButtonState';
 
 interface DeckButtonProps {
   label: string;
   icon?: string;
+  activeIcon?: string;
+  activeLabel?: string;
+  checkCommand?: string;
   color?: string;
   onClick?: () => void;
   className?: string;
@@ -14,11 +18,18 @@ interface DeckButtonProps {
 export const DeckButton: React.FC<DeckButtonProps> = ({
   label,
   icon,
+  activeIcon,
+  activeLabel,
+  checkCommand,
   color,
   onClick,
   className,
 }) => {
-  const IconComponent = icon && (LucideIcons as any)[icon];
+  const isActive = useButtonState({ checkCommand });
+  const currentIcon = isActive ? activeIcon || icon : icon;
+  const currentLabel = isActive ? activeLabel || label : label;
+  
+  const IconComponent = currentIcon && (LucideIcons as any)[currentIcon];
 
   return (
     <button
@@ -44,7 +55,7 @@ export const DeckButton: React.FC<DeckButtonProps> = ({
         )}
       </div>
       <span className="text-xs font-medium text-gray-300 group-hover:text-white truncate w-full text-center">
-        {label}
+        {currentLabel}
       </span>
     </button>
   );

@@ -9,6 +9,9 @@ export interface DeckButton {
   color?: string;
   row: number;
   col: number;
+  checkCommand?: string;
+  activeIcon?: string;
+  activeLabel?: string;
 }
 
 export const deckService = {

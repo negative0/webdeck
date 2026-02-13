@@ -1,7 +1,7 @@
 // This is your Prisma schema file,
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native", "darwin", "darwin-arm64"]
+  binaryTargets = ["native", "darwin", "darwin-arm64", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -43,6 +43,9 @@ model DeckButton {
   icon      String?
   command   String
   type      String   @default("COMMAND") // "COMMAND" or "SHORTCUT"
+  checkCommand String?
+  activeIcon   String?
+  activeLabel  String?
   color     String?
   row       Int
   col       Int

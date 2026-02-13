@@ -3,7 +3,7 @@ import { deckService, DeckButton as IDeckButton } from '../services/deck.service
 import { PresetSelector } from './PresetSelector';
 import { MAC_OS_PRESETS } from '../constants/macOsCommands';
 import * as LucideIcons from 'lucide-react';
-import { X, Save, Trash2, Plus, Sparkles, Loader2, List } from 'lucide-react';
+import { X, Save, Trash2, Plus, Sparkles, Loader2, List, ChevronRight } from 'lucide-react';
 
 const getRandomId = () => {
   return Math.random().toString(36).substring(2, 15);
@@ -48,6 +48,8 @@ export const CommandConfig: React.FC<CommandConfigProps> = ({
   );
   const [aiPrompt, setAiPrompt] = useState('');
   const [iconSearch, setIconSearch] = useState('');
+  const [activeIconSearch, setActiveIconSearch] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(!!button?.checkCommand);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [showPresetSelector, setShowPresetSelector] = useState(false);
   const aiInputRef = React.useRef<HTMLInputElement>(null);
@@ -70,7 +72,13 @@ export const CommandConfig: React.FC<CommandConfigProps> = ({
         type: (suggestion.type as any) || formData.type,
         icon: suggestion.icon || formData.icon,
         color: suggestion.color || formData.color,
+        checkCommand: suggestion.checkCommand,
+        activeIcon: suggestion.activeIcon,
+        activeLabel: suggestion.activeLabel,
       });
+      if (suggestion.checkCommand) {
+        setShowAdvanced(true);
+      }
       setAiPrompt('');
     } catch (error) {
       console.error('Failed to get suggestion:', error);
@@ -87,7 +95,11 @@ export const CommandConfig: React.FC<CommandConfigProps> = ({
       type: preset.type as any,
       icon: preset.icon,
       color: formData.color,
+      checkCommand: (preset).checkCommand,
+      activeIcon: (preset).activeIcon,
+      activeLabel: (preset).activeLabel,
     });
+    if ((preset as any).checkCommand) setShowAdvanced(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -315,6 +327,156 @@ export const CommandConfig: React.FC<CommandConfigProps> = ({
               )}
             </div>
           </div>
+
+          {/* Advanced Section */}
+          <div className="pt-4 border-t border-gray-800">
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-white transition-colors mb-4 w-full"
+            >
+              <ChevronRight size={16} className={`transition-transform ${showAdvanced ? 'rotate-90' : ''}`} />
+              Advanced: State Check (Toggle)
+            </button>
+            
+            {showAdvanced && (
+              <div className="space-y-4 pl-4 border-l-2 border-gray-800 ml-1">
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">
+                    Check Command (returns "true"/"1")
+                  </label>
+                  <textarea
+                    className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono text-xs"
+                    rows={2}
+                    value={formData.checkCommand || ''}
+                    onChange={(e) => setFormData({ ...formData, checkCommand: e.target.value })}
+                    placeholder='e.g. osascript -e "output muted of (get volume settings)"'
+                  />
+                  <p className="text-xs text-gray-500 mt-1">If this command outputs "true", "on", or "1", the button is considered Active.</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Active Label</label>
+                  <input
+                    type="text"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    value={formData.activeLabel || ''}
+                    onChange={(e) => setFormData({ ...formData, activeLabel: e.target.value })}
+                    placeholder="Label when active (e.g. Unmute)"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Active Icon</label>
+                  <input
+                    type="text"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2 transition-all"
+                    placeholder="Search active icons..."
+                    value={activeIconSearch}
+                    onChange={(e) => setActiveIconSearch(e.target.value)}
+                  />
+                  <div className="grid grid-cols-6 gap-2 h-48 overflow-y-auto p-2 bg-gray-800 rounded-xl border border-gray-700 content-start">
+                    {ICON_LIST
+                      .filter((icon) => icon.toLowerCase().includes(activeIconSearch.toLowerCase()))
+                      .slice(0, 50)
+                      .map((iconName) => {
+                      const Icon = (LucideIcons as any)[iconName];
+                      if (!Icon) return null;
+                      return (
+                        <button
+                          key={iconName}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, activeIcon: iconName })}
+                          className={`p-2 rounded-lg flex items-center justify-center transition-colors aspect-square ${
+                            formData.activeIcon === iconName ? 'bg-green-600 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+                          }`}
+                          title={iconName}
+                        >
+                          <Icon size={24} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Advanced Toggle */}
+          <div className="pt-4 border-t border-gray-800">
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-white transition-colors w-full"
+            >
+              <div className={`transition-transform duration-200 ${showAdvanced ? 'rotate-90' : ''}`}>
+                <ChevronRight size={16} />
+              </div>
+              Advanced Options (Toggle State)
+            </button>
+          </div>
+
+          {showAdvanced && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="bg-gray-800/50 p-4 rounded-xl space-y-4 border border-gray-700/50">
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Check Status Command</label>
+                  <p className="text-xs text-gray-500 mb-2">Command to check state (should return "true" or "1" for active)</p>
+                  <textarea
+                    className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono text-sm"
+                    rows={2}
+                    value={formData.checkCommand || ''}
+                    onChange={(e) => setFormData({ ...formData, checkCommand: e.target.value })}
+                    placeholder='e.g. osascript -e "output muted of (get volume settings)"'
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Active State Label</label>
+                  <input
+                    type="text"
+                    className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    value={formData.activeLabel || ''}
+                    onChange={(e) => setFormData({ ...formData, activeLabel: e.target.value })}
+                    placeholder="e.g. Unmute"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Active State Icon</label>
+                  <input
+                    type="text"
+                    className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2 transition-all text-sm"
+                    placeholder="Search icons..."
+                    value={activeIconSearch}
+                    onChange={(e) => setActiveIconSearch(e.target.value)}
+                  />
+                  <div className="grid grid-cols-6 gap-2 h-32 overflow-y-auto p-2 bg-gray-900 rounded-xl border border-gray-700 content-start custom-scrollbar">
+                    {ICON_LIST
+                      .filter((icon) => icon.toLowerCase().includes(activeIconSearch.toLowerCase()))
+                      .slice(0, 100)
+                      .map((iconName) => {
+                      const Icon = (LucideIcons as any)[iconName];
+                      if (!Icon) return null;
+                      return (
+                        <button
+                          key={`active-${iconName}`}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, activeIcon: iconName })}
+                          className={`p-2 rounded-lg flex items-center justify-center transition-colors aspect-square ${
+                            formData.activeIcon === iconName ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+                          }`}
+                          title={iconName}
+                        >
+                          <Icon size={20} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </form>
 
         <div className="p-6 border-t border-gray-800 bg-gray-900/50 flex gap-3">
@@ -337,7 +499,6 @@ export const CommandConfig: React.FC<CommandConfigProps> = ({
         </div>
       </div>
       
-      {/* Preset Selector Modal */}
       <PresetSelector 
         isOpen={showPresetSelector} 
         onClose={() => setShowPresetSelector(false)} 

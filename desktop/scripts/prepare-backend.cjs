@@ -27,6 +27,15 @@ fs.copyFileSync(backendPkg, path.join(destDir, 'package.json'));
 console.log('Replacing Prisma schema with SQLite version...');
 fs.copyFileSync(prismaSchema, path.join(destDir, 'src/prisma/schema.prisma'));
 
+// Copy dev.db to backend-dist so it can be used as initial DB
+console.log('Copying dev.db to backend-dist...');
+const devDbPath = path.resolve(__dirname, '../prisma/dev.db');
+if (fs.existsSync(devDbPath)) {
+    fs.copyFileSync(devDbPath, path.join(destDir, 'src/prisma/dev.db'));
+} else {
+    console.warn('dev.db not found in desktop/prisma, skipping copy.');
+}
+
 // Patch index.ts to listen on 0.0.0.0 (Already done in backend/src/index.ts)
 // console.log('Patching index.ts to listen on 0.0.0.0...');
 // const indexTsPath = path.join(destDir, 'src/index.ts');
@@ -112,13 +121,6 @@ try {
     // Generate to default location (node_modules/@prisma/client)
     execSync('npx prisma generate --schema=./src/prisma/schema.prisma', { 
         cwd: destDir, 
-        stdio: 'inherit',
-        env
-    });
-
-    console.log('Creating initial SQLite database...');
-    execSync('npx prisma db push --schema=./src/prisma/schema.prisma', {
-        cwd: destDir,
         stdio: 'inherit',
         env
     });

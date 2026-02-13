@@ -9,6 +9,9 @@ export interface DeckButtonData {
   color?: string;
   row: number;
   col: number;
+  checkCommand?: string;
+  activeIcon?: string;
+  activeLabel?: string;
 }
 
 export const deckService = {
@@ -44,6 +47,9 @@ export const deckService = {
             icon: button.icon,
             command: button.command,
             type: button.type || 'COMMAND',
+            checkCommand: button.checkCommand,
+            activeIcon: button.activeIcon,
+            activeLabel: button.activeLabel,
             color: button.color,
             row: button.row,
             col: button.col,

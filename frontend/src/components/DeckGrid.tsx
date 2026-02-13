@@ -182,6 +182,9 @@ export const DeckGrid: React.FC<DeckGridProps> = ({
                     <DeckButton
                       label={button.label}
                       icon={button.icon}
+                      activeIcon={button.activeIcon}
+                      activeLabel={button.activeLabel}
+                      checkCommand={button.checkCommand}
                       color={button.color}
                       onClick={() => onExecute(button)}
                       className={`w-full h-full ${isDragOver ? 'ring-2 ring-blue-500 rounded-xl' : ''} ${onMove ? 'cursor-grab active:cursor-grabbing' : ''}`}
@@ -236,6 +239,9 @@ export const DeckGrid: React.FC<DeckGridProps> = ({
                     <DeckButton
                       label={button.label}
                       icon={button.icon}
+                      activeIcon={button.activeIcon}
+                      activeLabel={button.activeLabel}
+                      checkCommand={button.checkCommand}
                       color={button.color}
                       onClick={() => onExecute(button)}
                       className="w-full h-full text-lg shadow-none"
