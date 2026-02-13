@@ -8,3 +8,4 @@ dist-electron
 .DS_Store
 .env
 generated
+prisma/dev.db
