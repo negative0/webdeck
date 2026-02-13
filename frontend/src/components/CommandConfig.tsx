@@ -3,6 +3,10 @@ import { deckService, DeckButton as IDeckButton } from '../services/deck.service
 import * as LucideIcons from 'lucide-react';
 import { X, Save, Trash2, Plus, Sparkles, Loader2 } from 'lucide-react';
 
+const getRandomId = () => {
+  return Math.random().toString(36).substring(2, 15);
+}  
+
 interface CommandConfigProps {
   button?: IDeckButton;
   onSave: (button: IDeckButton) => void;
@@ -26,7 +30,7 @@ export const CommandConfig: React.FC<CommandConfigProps> = ({
 }) => {
   const [formData, setFormData] = useState<IDeckButton>(
     button || {
-      id: crypto.randomUUID(),
+      id: getRandomId(),
       label: '',
       command: '',
       type: 'COMMAND',
