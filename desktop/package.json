@@ -9,7 +9,7 @@
     "dev": "npm run build:backend && npm run build:electron && electron .",
     "build": "npm run build:frontend && npm run build:backend && npm run build:electron",
     "build:electron": "node scripts/build.cjs",
-    "build:frontend": "cd ../frontend && VITE_API_BASE_URL=http://localhost:3333 npm run build && rm -rf ../desktop/frontend-dist && mkdir -p ../desktop/frontend-dist && cp -r dist/* ../desktop/frontend-dist/",
+    "build:frontend": "cd ../frontend && npm run build && rm -rf ../desktop/frontend-dist && mkdir -p ../desktop/frontend-dist && cp -r dist/* ../desktop/frontend-dist/",
     "build:backend": "node scripts/prepare-backend.cjs",
     "dist": "npm run build && electron-builder",
     "postinstall": "electron-builder install-app-deps"

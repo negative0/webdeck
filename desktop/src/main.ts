@@ -79,7 +79,8 @@ const createWindow = () => {
   });
 
   // Load the frontend
-  if (true) { // Always load from file for now as dev server is flaky
+  // Always load from file for stability
+  if (true) { 
     // In production, load from file
     mainWindow.loadFile(path.join(__dirname, '../frontend-dist/index.html'));
   } else {

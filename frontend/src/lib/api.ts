@@ -1,7 +1,8 @@
 import axios from 'axios';
 
+const currentHost = window.location.host;
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:9000',
+  baseURL: import.meta.env.VITE_API_BASE_URL ?? `http://${currentHost}`,
 });
 
 api.interceptors.request.use(
