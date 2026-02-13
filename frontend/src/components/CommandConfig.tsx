@@ -19,7 +19,11 @@ interface CommandConfigProps {
 }
 
 const ICON_LIST = Object.keys(LucideIcons).filter(
-  (key) => typeof (LucideIcons as any)[key] === 'function' && key !== 'createLucideIcon'
+  (key) => 
+    key !== 'createLucideIcon' && 
+    key !== 'Icon' && 
+    !key.endsWith('Icon') && 
+    /^[A-Z]/.test(key)
 );
 
 export const CommandConfig: React.FC<CommandConfigProps> = ({
@@ -283,26 +287,32 @@ export const CommandConfig: React.FC<CommandConfigProps> = ({
               value={iconSearch}
               onChange={(e) => setIconSearch(e.target.value)}
             />
-            <div className="grid grid-cols-5 gap-2 h-32 overflow-y-auto p-2 bg-gray-800 rounded-xl border border-gray-700">
+            <div className="grid grid-cols-6 gap-2 h-64 overflow-y-auto p-2 bg-gray-800 rounded-xl border border-gray-700 content-start">
               {ICON_LIST
                 .filter((icon) => icon.toLowerCase().includes(iconSearch.toLowerCase()))
                 .slice(0, 100)
                 .map((iconName) => {
                 const Icon = (LucideIcons as any)[iconName];
+                if (!Icon) return null;
                 return (
                   <button
                     key={iconName}
                     type="button"
                     onClick={() => setFormData({ ...formData, icon: iconName })}
-                    className={`p-2 rounded-lg flex items-center justify-center transition-colors ${
-                      formData.icon === iconName ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-700'
+                    className={`p-2 rounded-lg flex items-center justify-center transition-colors aspect-square ${
+                      formData.icon === iconName ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-700 hover:text-white'
                     }`}
                     title={iconName}
                   >
-                    <Icon size={20} />
+                    <Icon size={24} />
                   </button>
                 );
               })}
+              {ICON_LIST.filter((icon) => icon.toLowerCase().includes(iconSearch.toLowerCase())).length === 0 && (
+                <div className="col-span-6 text-center text-gray-500 py-8 text-sm">
+                  No icons found
+                </div>
+              )}
             </div>
           </div>
         </form>
