@@ -179,6 +179,24 @@ function App() {
   const rows = activeDeck?.rows || 3;
   const cols = activeDeck?.cols || 5;
 
+  const activeDeckIndex = decks.findIndex(d => d.id === activeDeckId);
+  
+  const handleNextDeck = () => {
+    if (activeDeckIndex < decks.length - 1) {
+      const nextId = decks[activeDeckIndex + 1].id;
+      setActiveDeckId(nextId);
+      fetchDeck(nextId);
+    }
+  };
+
+  const handlePrevDeck = () => {
+    if (activeDeckIndex > 0) {
+      const prevId = decks[activeDeckIndex - 1].id;
+      setActiveDeckId(prevId);
+      fetchDeck(prevId);
+    }
+  };
+
   const handleAddAtPosition = (row: number, col: number) => {
     if (activeTab === 'edit') {
       setEditingButton(undefined);
@@ -406,6 +424,8 @@ function App() {
                   }}
                   rows={rows}
                   cols={cols}
+                  onNextDeck={activeDeckIndex < decks.length - 1 ? handleNextDeck : undefined}
+                  onPrevDeck={activeDeckIndex > 0 ? handlePrevDeck : undefined}
                 />
               </div>
             )}

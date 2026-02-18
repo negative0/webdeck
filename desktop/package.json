@@ -12,6 +12,7 @@
     "build:frontend": "cd ../frontend && npm run build && rm -rf ../desktop/frontend-dist && mkdir -p ../desktop/frontend-dist && cp -r dist/* ../desktop/frontend-dist/",
     "build:backend": "node scripts/prepare-backend.cjs",
     "dist": "npm run build && electron-builder",
+    "dist:debug": "DEBUG_BUILD=true npm run build && electron-builder",
     "postinstall": "electron-builder install-app-deps",
     "db:push": "prisma db push --schema=./prisma/schema.prisma",
     "db:generate": "prisma generate --schema=./prisma/schema.prisma",
@@ -69,7 +70,10 @@
           "*.node"
         ]
       },
-      "prisma/dev.db"
+      {
+        "from": "prisma/dev.db",
+        "to": "prisma/dev.db"
+      }
     ],
     "mac": {
       "target": "dmg",

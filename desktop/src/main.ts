@@ -11,6 +11,41 @@ const __dirname = path.dirname(__filename);
 let backend: any;
 let isServerRunning = false;
 
+/**
+ * Resolves the correct path for packaged apps by checking multiple possible locations
+ * @param relativePath Relative path from app root (e.g., 'backend-dist/index.js', 'prisma/dev.db')
+ * @param description Description of what we're looking for (for logging)
+ * @returns The first existing path, or the first path in the array if none exist
+ */
+const resolvePackagedPath = (relativePath: string, description: string): string => {
+  if (!app.isPackaged) {
+    const devPath = path.join(__dirname, '..', relativePath);
+    console.log(`Development mode - ${description} path:`, devPath);
+    return devPath;
+  }
+
+  // In packaged apps, check multiple possible locations
+  const possiblePaths = [
+    // From ASAR
+    path.join(process.resourcesPath, 'app.asar', relativePath),
+    // Direct in resources
+    path.join(process.resourcesPath, relativePath),
+    // In app path
+    path.join(app.getAppPath(), relativePath),
+  ];
+
+  console.log(`Resolving packaged path for ${description}:`, possiblePaths);
+  const foundPath = possiblePaths.find(p => fs.existsSync(p));
+
+  if (foundPath) {
+    console.log(`Found ${description} at:`, foundPath);
+  } else {
+    console.warn(`${description} not found in any of the checked paths`);
+  }
+
+  return foundPath || possiblePaths[0];
+};
+
 // Import backend to start it
 // Note: This relies on prepare-backend.cjs having run first
 // We dynamically import to ensure environment is set up first if needed
@@ -39,9 +74,7 @@ const startBackend = async () => {
 
     // Copy initial DB if needed (only if we are using the local userData copy)
     if (dbPath === path.join(userDataPath, 'webdeck.db') && !fs.existsSync(dbPath)) {
-        const initialDbPath = app.isPackaged
-            ? path.join(process.resourcesPath, 'desktop/prisma/dev.db')
-            : path.join(__dirname, '../prisma/dev.db');
+        const initialDbPath = resolvePackagedPath('prisma/dev.db', 'initial database');
 
         if (fs.existsSync(initialDbPath)) {
              console.log('Copying initial database to', dbPath);
@@ -57,13 +90,16 @@ const startBackend = async () => {
 
     // Set PUBLIC_DIR for backend to serve frontend
     // We point to frontend-dist which is bundled in the app
-    const publicDir = path.join(__dirname, '../frontend-dist');
+    const publicDir = resolvePackagedPath('frontend-dist', 'frontend');
     process.env.PUBLIC_DIR = publicDir;
 
     // We need to import the backend entry point
     // The backend is bundled to backend-dist/index.js
-    const backendPath = path.join(__dirname, '../backend-dist/index.js');
+    // In packaged apps, backend-dist is unpacked from ASAR
+    const backendPath = resolvePackagedPath('backend-dist/index.js', 'backend');
+
     if (fs.existsSync(backendPath)) {
+        console.log('Backend file found, importing...');
         backend = await import(backendPath);
         if (backend.start) {
             await backend.start();
@@ -71,10 +107,16 @@ const startBackend = async () => {
             console.log('Backend started via start()');
         } else {
              console.log('Backend imported (legacy mode)');
-             isServerRunning = true; 
+             isServerRunning = true;
         }
     } else {
         console.error('Backend not found at', backendPath);
+        const parentDir = path.dirname(backendPath);
+        if (fs.existsSync(parentDir)) {
+            console.error('Parent directory exists. Contents:', fs.readdirSync(parentDir));
+        } else {
+            console.error('Parent directory does not exist:', parentDir);
+        }
     }
   } catch (err) {
     console.error('Failed to start backend:', err);
@@ -108,8 +150,8 @@ const createWindow = () => {
     });
   }
   
-  // Open DevTools in dev
-  if (!app.isPackaged) {
+  // Open DevTools in dev mode or when DEBUG_BUILD is enabled
+  if (!app.isPackaged || process.env.DEBUG_BUILD === 'true') {
     mainWindow.webContents.openDevTools();
   }
 };

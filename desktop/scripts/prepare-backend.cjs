@@ -48,6 +48,9 @@ if (fs.existsSync(appTsPath)) {
 
 const esbuild = require('esbuild');
 
+const debug = process.env.DEBUG_BUILD === 'true';
+console.log('Debug mode:', debug ? 'enabled' : 'disabled');
+
 // Build backend to single file
 console.log('Building backend...');
 try {
@@ -67,9 +70,11 @@ try {
         banner: {
             js: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
         },
-        sourcemap: true,
+        sourcemap: true || debug,
+        minify: !debug,
         define: {
-            'process.env.NODE_ENV': '"production"'
+            'process.env.NODE_ENV': '"production"',
+            'process.env.DEBUG_BUILD': `"${debug}"`
         }
     });
 } catch (e) {

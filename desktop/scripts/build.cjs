@@ -3,6 +3,10 @@ const path = require('path');
 const fs = require('fs');
 
 const production = process.env.NODE_ENV === 'production';
+const debug = process.env.DEBUG_BUILD === 'true';
+
+console.log('Build mode:', production ? 'production' : 'development');
+console.log('Debug mode:', debug ? 'enabled' : 'disabled');
 
 async function build() {
     const mainOptions = {
@@ -13,11 +17,12 @@ async function build() {
         outfile: 'dist/main.js',
         external: ['electron', '@prisma/client', 'prisma', 'better-sqlite3', 'hono', 'dotenv', 'koffi'], 
         format: 'esm',
-        sourcemap: !production,
-        minify: production,
+        sourcemap: !production || debug,
+        minify: production && !debug,
         loader: { '.ts': 'ts' },
         define: {
-            'process.env.NODE_ENV': `"${process.env.NODE_ENV || 'production'}"`
+            'process.env.NODE_ENV': `"${process.env.NODE_ENV || 'production'}"`,
+            'process.env.DEBUG_BUILD': `"${debug}"`
         }
     };
 
@@ -29,8 +34,8 @@ async function build() {
         outfile: 'dist/preload.js',
         external: ['electron'],
         format: 'cjs',
-        sourcemap: !production,
-        minify: production,
+        sourcemap: !production || debug,
+        minify: production && !debug,
         loader: { '.ts': 'ts' }
     };
 

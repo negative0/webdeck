@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Maximize2, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Maximize2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DeckButton } from './DeckButton';
 import { DeckButton as IDeckButton } from '../services/deck.service';
 
@@ -8,6 +8,8 @@ interface DeckGridProps {
   onExecute: (button: IDeckButton) => void;
   onAdd?: (row: number, col: number) => void;
   onMove?: (source: { row: number; col: number }, target: { row: number; col: number }) => void;
+  onNextDeck?: () => void;
+  onPrevDeck?: () => void;
   rows?: number;
   cols?: number;
 }
@@ -219,6 +221,25 @@ export const DeckGrid: React.FC<DeckGridProps> = ({
           >
             <X size={24} />
           </button>
+          
+          {onPrevDeck && (
+             <button 
+                onClick={(e) => { e.stopPropagation(); onPrevDeck(); }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 p-4 bg-gray-800/50 hover:bg-gray-700/80 rounded-full text-white z-50 transition-all backdrop-blur-sm border border-gray-700/50"
+             >
+                <ChevronLeft size={32} />
+             </button>
+          )}
+          
+          {onNextDeck && (
+             <button 
+                onClick={(e) => { e.stopPropagation(); onNextDeck(); }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-4 bg-gray-800/50 hover:bg-gray-700/80 rounded-full text-white z-50 transition-all backdrop-blur-sm border border-gray-700/50"
+             >
+                <ChevronRight size={32} />
+             </button>
+          )}
+
           <div 
             className="grid gap-2"
             style={{
