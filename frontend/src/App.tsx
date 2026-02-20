@@ -260,6 +260,17 @@ function App() {
     }
   };
 
+  const handleLayoutChange = async (newRows: number, newCols: number) => {
+    if (!activeDeckId) return;
+    try {
+      const updatedDeck = await deckService.updateDeckMetadata(activeDeckId, { rows: newRows, cols: newCols });
+      setDecks(decks.map(d => d.id === activeDeckId ? updatedDeck : d));
+      addLog(`Grid resized to ${newRows}x${newCols}`, 'success');
+    } catch (error) {
+      addLog('Failed to update grid size', 'error');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-gray-100 font-sans selection:bg-blue-500/30 relative">
       <div className="absolute inset-0 bg-dot-pattern pointer-events-none"></div>
@@ -401,12 +412,14 @@ function App() {
               </div>
             )}
 
-            {isLoading ? (
-              <div className="h-96 flex flex-col items-center justify-center gap-4 text-gray-500">
-                <RefreshCw className="animate-spin" size={48} />
-                <p className="font-medium">Connecting to Host...</p>
-              </div>
-            ) : (
+            <div className="relative min-h-[24rem]">
+              {isLoading && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 text-gray-500 bg-black/50 backdrop-blur-sm rounded-3xl">
+                  <RefreshCw className="animate-spin" size={48} />
+                  <p className="font-medium">Connecting to Host...</p>
+                </div>
+              )}
+              
               <div className={activeTab === 'edit' ? '' : ''}>
                 <DeckGrid
                   buttons={buttons}
@@ -426,9 +439,10 @@ function App() {
                   cols={cols}
                   onNextDeck={activeDeckIndex < decks.length - 1 ? handleNextDeck : undefined}
                   onPrevDeck={activeDeckIndex > 0 ? handlePrevDeck : undefined}
+                  onLayoutChange={activeTab === 'edit' ? handleLayoutChange : undefined}
                 />
               </div>
-            )}
+            </div>
           </section>
           
           {/* Action Row for Mobile/Better Visibility */}
