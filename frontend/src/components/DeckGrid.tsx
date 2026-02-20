@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Maximize2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DeckButton } from './DeckButton';
 import { DeckButton as IDeckButton } from '../services/deck.service';
+import { useWakeLock } from '../hooks/useWakeLock';
 
 interface DeckGridProps {
   buttons: IDeckButton[];
@@ -19,22 +20,19 @@ export const DeckGrid: React.FC<DeckGridProps> = ({
   onExecute,
   onAdd,
   onMove,
+  onNextDeck,
+  onPrevDeck,
   rows = 3,
   cols = 5,
 }) => {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [dragOverCell, setDragOverCell] = useState<{ row: number; col: number } | null>(null);
-  const wakeLockRef = useRef<any>(null);
+  const wakeLock = useWakeLock(isFullScreen);
 
   useEffect(() => {
     const handleFullScreenChange = () => {
       if (!document.fullscreenElement) {
         setIsFullScreen(false);
-        // Release wake lock
-        if (wakeLockRef.current) {
-          wakeLockRef.current.release().catch(() => {});
-          wakeLockRef.current = null;
-        }
         // Unlock orientation
         if (screen.orientation && 'unlock' in screen.orientation) {
           (screen.orientation as any).unlock();
@@ -45,32 +43,25 @@ export const DeckGrid: React.FC<DeckGridProps> = ({
     document.addEventListener('fullscreenchange', handleFullScreenChange);
     return () => {
       document.removeEventListener('fullscreenchange', handleFullScreenChange);
-      // Cleanup wake lock on unmount
-      if (wakeLockRef.current) {
-        wakeLockRef.current.release().catch(() => {});
-      }
     };
   }, []);
 
   const handleEnterFullScreen = async () => {
     try {
+      if ((window as any).ReactNativeWebView) {
+        (window as any).ReactNativeWebView.postMessage(JSON.stringify({ type: 'ENTER_FULLSCREEN' }));
+        setIsFullScreen(true);
+        return;
+      }
+
       await document.documentElement.requestFullscreen();
       setIsFullScreen(true);
-      
-      // Request wake lock
-      if ('wakeLock' in navigator) {
-        try {
-          wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
-        } catch (err) {
-          console.error('Wake Lock error:', err);
-        }
-      }
 
       // Lock orientation to landscape
       if (screen.orientation && 'lock' in screen.orientation) {
         try {
           await (screen.orientation as any).lock('landscape');
-        } catch (err) {
+        } catch (err) { 
           console.error('Orientation Lock error:', err);
         }
       }
@@ -81,17 +72,17 @@ export const DeckGrid: React.FC<DeckGridProps> = ({
 
   const handleExitFullScreen = async () => {
     try {
+      if ((window as any).ReactNativeWebView) {
+        (window as any).ReactNativeWebView.postMessage(JSON.stringify({ type: 'EXIT_FULLSCREEN' }));
+        setIsFullScreen(false);
+        return;
+      }
+
       if (document.fullscreenElement) {
         await document.exitFullscreen();
       }
       setIsFullScreen(false);
-      
-      // Release wake lock
-      if (wakeLockRef.current) {
-        await wakeLockRef.current.release();
-        wakeLockRef.current = null;
-      }
-      
+
       // Unlock orientation
       if (screen.orientation && 'unlock' in screen.orientation) {
         (screen.orientation as any).unlock();
