@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Maximize2, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Maximize2, X, ChevronLeft, ChevronRight, Save, Grid } from 'lucide-react';
 import { DeckButton } from './DeckButton';
 import { DeckButton as IDeckButton } from '../services/deck.service';
+import { useWakeLock } from '../hooks/useWakeLock';
 
 interface DeckGridProps {
   buttons: IDeckButton[];
@@ -12,6 +13,7 @@ interface DeckGridProps {
   onPrevDeck?: () => void;
   rows?: number;
   cols?: number;
+  onLayoutChange?: (rows: number, cols: number) => void;
 }
 
 export const DeckGrid: React.FC<DeckGridProps> = ({
@@ -23,20 +25,24 @@ export const DeckGrid: React.FC<DeckGridProps> = ({
   onPrevDeck,
   rows = 3,
   cols = 5,
+  onLayoutChange,
 }) => {
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isLayoutConfigOpen, setIsLayoutConfigOpen] = useState(false);
+  const [tempRows, setTempRows] = useState(rows);
+  const [tempCols, setTempCols] = useState(cols);
   const [dragOverCell, setDragOverCell] = useState<{ row: number; col: number } | null>(null);
-  const wakeLockRef = useRef<any>(null);
+  const wakeLock = useWakeLock(isFullScreen);
+
+  useEffect(() => {
+    setTempRows(rows);
+    setTempCols(cols);
+  }, [rows, cols]);
 
   useEffect(() => {
     const handleFullScreenChange = () => {
       if (!document.fullscreenElement) {
         setIsFullScreen(false);
-        // Release wake lock
-        if (wakeLockRef.current) {
-          wakeLockRef.current.release().catch(() => {});
-          wakeLockRef.current = null;
-        }
         // Unlock orientation
         if (screen.orientation && 'unlock' in screen.orientation) {
           (screen.orientation as any).unlock();
@@ -47,32 +53,25 @@ export const DeckGrid: React.FC<DeckGridProps> = ({
     document.addEventListener('fullscreenchange', handleFullScreenChange);
     return () => {
       document.removeEventListener('fullscreenchange', handleFullScreenChange);
-      // Cleanup wake lock on unmount
-      if (wakeLockRef.current) {
-        wakeLockRef.current.release().catch(() => {});
-      }
     };
   }, []);
 
   const handleEnterFullScreen = async () => {
     try {
+      if ((window as any).ReactNativeWebView) {
+        (window as any).ReactNativeWebView.postMessage(JSON.stringify({ type: 'ENTER_FULLSCREEN' }));
+        setIsFullScreen(true);
+        return;
+      }
+
       await document.documentElement.requestFullscreen();
       setIsFullScreen(true);
-      
-      // Request wake lock
-      if ('wakeLock' in navigator) {
-        try {
-          wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
-        } catch (err) {
-          console.error('Wake Lock error:', err);
-        }
-      }
 
       // Lock orientation to landscape
       if (screen.orientation && 'lock' in screen.orientation) {
         try {
           await (screen.orientation as any).lock('landscape');
-        } catch (err) {
+        } catch (err) { 
           console.error('Orientation Lock error:', err);
         }
       }
@@ -83,17 +82,17 @@ export const DeckGrid: React.FC<DeckGridProps> = ({
 
   const handleExitFullScreen = async () => {
     try {
+      if ((window as any).ReactNativeWebView) {
+        (window as any).ReactNativeWebView.postMessage(JSON.stringify({ type: 'EXIT_FULLSCREEN' }));
+        setIsFullScreen(false);
+        return;
+      }
+
       if (document.fullscreenElement) {
         await document.exitFullscreen();
       }
       setIsFullScreen(false);
-      
-      // Release wake lock
-      if (wakeLockRef.current) {
-        await wakeLockRef.current.release();
-        wakeLockRef.current = null;
-      }
-      
+
       // Unlock orientation
       if (screen.orientation && 'unlock' in screen.orientation) {
         (screen.orientation as any).unlock();
@@ -112,7 +111,70 @@ export const DeckGrid: React.FC<DeckGridProps> = ({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex justify-end px-2">
+      <div className="flex justify-end px-2 gap-2">
+        {onLayoutChange && (
+          <div className="relative">
+            <button
+              onClick={() => setIsLayoutConfigOpen(!isLayoutConfigOpen)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
+                isLayoutConfigOpen 
+                  ? 'bg-blue-600 text-white border-blue-500' 
+                  : 'bg-gray-800/50 text-gray-400 hover:text-white border-gray-700/50 hover:border-gray-600'
+              }`}
+            >
+              <Grid size={14} />
+              <span>Grid Size</span>
+            </button>
+            
+            {isLayoutConfigOpen && (
+              <div className="absolute top-full right-0 mt-2 p-4 bg-gray-900 rounded-xl border border-gray-700 shadow-xl z-50 w-64">
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Rows</label>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => setTempRows(Math.max(1, tempRows - 1))}
+                        className="w-8 h-8 rounded-lg bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+                      >-</button>
+                      <span className="w-8 text-center font-mono font-bold text-white">{tempRows}</span>
+                      <button 
+                        onClick={() => setTempRows(Math.min(8, tempRows + 1))}
+                        className="w-8 h-8 rounded-lg bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+                      >+</button>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between gap-4">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Columns</label>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => setTempCols(Math.max(1, tempCols - 1))}
+                        className="w-8 h-8 rounded-lg bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+                      >-</button>
+                      <span className="w-8 text-center font-mono font-bold text-white">{tempCols}</span>
+                      <button 
+                        onClick={() => setTempCols(Math.min(12, tempCols + 1))}
+                        className="w-8 h-8 rounded-lg bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+                      >+</button>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      onLayoutChange(tempRows, tempCols);
+                      setIsLayoutConfigOpen(false);
+                    }}
+                    className="mt-2 w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-2 rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95"
+                  >
+                    <Save size={14} />
+                    Apply Changes
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <button
           onClick={handleEnterFullScreen}
           className="flex items-center gap-2 px-3 py-1.5 bg-gray-800/50 hover:bg-gray-800 rounded-full text-xs font-medium text-gray-400 hover:text-white transition-all border border-gray-700/50 hover:border-gray-600"
