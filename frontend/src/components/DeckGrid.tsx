@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Maximize2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DeckButton } from './DeckButton';
 import { DeckButton as IDeckButton } from '../services/deck.service';
@@ -19,6 +19,8 @@ export const DeckGrid: React.FC<DeckGridProps> = ({
   onExecute,
   onAdd,
   onMove,
+  onNextDeck,
+  onPrevDeck,
   rows = 3,
   cols = 5,
 }) => {

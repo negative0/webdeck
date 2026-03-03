@@ -62,4 +62,24 @@ export const deckService = {
     const response = await api.post('/ai/suggest', { prompt });
     return response.data;
   },
+
+  exportBackup: async (): Promise<void> => {
+    const response = await api.get('/backup');
+    const data = response.data;
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const date = new Date().toISOString().slice(0, 10);
+    a.download = `webdeck-backup-${date}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+
+  importBackup: async (file: File): Promise<{ decks: number; buttons: number }> => {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    const response = await api.post('/backup/restore', data);
+    return response.data;
+  },
 };

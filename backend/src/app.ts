@@ -1,6 +1,7 @@
 import deckRoutes from './routes/deck.routes.ts';
 import authRoutes from './routes/auth.routes.ts';
 import aiRoutes from './routes/ai.routes.ts';
+import backupRoutes from './routes/backup.routes.ts';
 import { authMiddleware } from './middlewares/authMiddleware.ts';
 import { errorHandler } from './middlewares/error.ts';
 import { Hono } from 'hono';
@@ -27,11 +28,13 @@ app.get('/health', c => {
 // Mount routes
 app.route('/auth', authRoutes);
 
-// Apply auth middleware to all deck and ai routes
+// Apply auth middleware to all deck, ai, and backup routes
 app.use('/deck/*', authMiddleware);
 app.use('/ai/*', authMiddleware);
+app.use('/backup/*', authMiddleware);
 app.route('/deck', deckRoutes);
 app.route('/ai', aiRoutes);
+app.route('/backup', backupRoutes);
 
 // Serve static files from the 'public' directory
 app.use('/*', serveStatic({ root: './public' }));

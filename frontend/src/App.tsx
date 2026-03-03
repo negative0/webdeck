@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Layout, Settings, Plus, RefreshCw, Monitor, Smartphone, Terminal, Play, LogOut, Sparkles, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Layout, Settings, Plus, RefreshCw, Monitor, Smartphone, Terminal, Play, LogOut, Sparkles, Trash2, Download, Upload } from 'lucide-react';
 import { DeckGrid } from './components/DeckGrid';
 import { CommandConfig } from './components/CommandConfig';
 import { EmojiKeyboard } from './components/EmojiKeyboard';
@@ -21,6 +21,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<'control' | 'edit'>('control');
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [logs, setLogs] = useState<{ msg: string; type: 'success' | 'error' | 'info' }[]>([]);
+  const backupFileInputRef = useRef<HTMLInputElement>(null);
 
   // Check if running in Electron
   const isElectron = !!window.electron;
@@ -260,6 +261,34 @@ function App() {
     }
   };
 
+  const handleExportBackup = async () => {
+    try {
+      await deckService.exportBackup();
+      addLog('Backup exported', 'success');
+    } catch (error) {
+      addLog('Failed to export backup', 'error');
+    }
+  };
+
+  const handleImportBackup = () => {
+    backupFileInputRef.current?.click();
+  };
+
+  const handleBackupFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Reset so the same file can be re-selected
+    e.target.value = '';
+    if (!confirm(`Restore from "${file.name}"? This will replace all your current decks.`)) return;
+    try {
+      const result = await deckService.importBackup(file);
+      addLog(`Restored ${result.decks} deck(s) and ${result.buttons} button(s)`, 'success');
+      loadDecks();
+    } catch (error: any) {
+      addLog(`Restore failed: ${error?.response?.data?.message || error.message}`, 'error');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-gray-100 font-sans selection:bg-blue-500/30 relative">
       <div className="absolute inset-0 bg-dot-pattern pointer-events-none"></div>
@@ -459,6 +488,33 @@ function App() {
             </div>
           )}
 
+          {/* Backup & Restore — visible in Config tab */}
+          {activeTab === 'edit' && (
+            <div className="bg-gray-900/50 border border-gray-800 rounded-3xl p-6">
+              <div className="flex items-center gap-2 mb-4 text-gray-400">
+                <Download size={18} />
+                <h3 className="text-sm font-bold uppercase tracking-widest">Backup & Restore</h3>
+              </div>
+              <p className="text-xs text-gray-500 mb-4">Export your decks and buttons as a JSON file, or restore from a previous backup.</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleExportBackup}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl transition-colors"
+                >
+                  <Download size={16} />
+                  Export
+                </button>
+                <button
+                  onClick={handleImportBackup}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl transition-colors"
+                >
+                  <Upload size={16} />
+                  Import
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Status & Info Section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Logs */}
@@ -532,7 +588,7 @@ function App() {
       )}
 
       {isEmojiOpen && (
-        <EmojiKeyboard 
+        <EmojiKeyboard
           onEmojiClick={(emojiData) => {
             handleExecute(emojiData.emoji, 'PASTE');
             setIsEmojiOpen(false);
@@ -540,6 +596,14 @@ function App() {
           onClose={() => setIsEmojiOpen(false)}
         />
       )}
+
+      <input
+        ref={backupFileInputRef}
+        type="file"
+        accept=".json"
+        className="hidden"
+        onChange={handleBackupFileChange}
+      />
 
       {/* Footer / Connection Status */}
       <footer className="mt-auto py-8 border-t border-gray-900">
