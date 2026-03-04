@@ -5,6 +5,7 @@ export interface Deck {
   name: string;
   rows: number;
   cols: number;
+  contextApp?: string;
 }
 
 export interface DeckButton {
@@ -56,6 +57,11 @@ export const deckService = {
   executeCommand: async (command: string, type: string = 'COMMAND'): Promise<any> => {
     const response = await api.post('/deck/execute', { command, type });
     return response.data;
+  },
+
+  getActiveApp: async (): Promise<string | null> => {
+    const response = await api.get('/deck/context');
+    return response.data.activeApp;
   },
 
   suggestCommand: async (prompt: string): Promise<Partial<DeckButton>> => {

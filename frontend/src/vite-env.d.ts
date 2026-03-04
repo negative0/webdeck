@@ -6,5 +6,7 @@ interface Window {
       send(channel: string, data?: any): void;
       on(channel: string, func: (...args: any[]) => void): void;
     };
+    onActiveAppChange?: (callback: (appName: string) => void) => void;
+    getActiveApp?: () => Promise<string>;
   };
 }

@@ -19,6 +19,7 @@ export interface CreateDeckData {
   name: string;
   rows?: number;
   cols?: number;
+  contextApp?: string;
 }
 
 export const deckService = {
@@ -58,6 +59,7 @@ export const deckService = {
         name: data.name,
         rows: data.rows || 3,
         cols: data.cols || 5,
+        contextApp: data.contextApp,
         userId
       }
     });
@@ -69,7 +71,8 @@ export const deckService = {
       data: {
         name: data.name,
         rows: data.rows,
-        cols: data.cols
+        cols: data.cols,
+        contextApp: data.contextApp
       }
     });
   },

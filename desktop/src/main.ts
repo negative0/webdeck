@@ -1,8 +1,9 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, systemPreferences } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { networkInterfaces } from 'os';
+import { exec } from 'child_process';
 
 // Since we bundle with esbuild, we need to handle __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -124,6 +125,24 @@ const startBackend = async () => {
 };
 
 let mainWindow: BrowserWindow | null = null;
+let lastFocusedApp = '';
+let appPollInterval: ReturnType<typeof setInterval> | null = null;
+
+function detectFocusedApp(callback: (appName: string) => void) {
+  if (process.platform === 'darwin') {
+    exec(
+      `osascript -e 'tell application "System Events" to get displayed name of first application process whose frontmost is true'`,
+      (err, stdout) => {
+         console.log('Active window', stdout.trim())
+        if (!err && stdout.trim()) callback(stdout.trim());
+      }
+    );
+  } else if (process.platform === 'linux') {
+    exec(`xdotool getactivewindow getwindowname 2>/dev/null`, (err, stdout) => {
+      if (!err && stdout.trim()) callback(stdout.trim());
+    });
+  }
+}
 
 const createWindow = () => {
   mainWindow = new BrowserWindow({
@@ -159,6 +178,21 @@ const createWindow = () => {
 app.whenReady().then(async () => {
   await startBackend();
   createWindow();
+
+  // Request accessibility permission on macOS (needed for System Events detection)
+  if (process.platform === 'darwin') {
+    systemPreferences.isTrustedAccessibilityClient(false);
+  }
+
+  // Poll for focused app changes every second
+  appPollInterval = setInterval(() => {
+    detectFocusedApp((appName) => {
+      if (appName !== lastFocusedApp) {
+        lastFocusedApp = appName;
+        mainWindow?.webContents.send('active-app-changed', appName);
+      }
+    });
+  }, 1000);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -215,6 +249,14 @@ ipcMain.on('get-ip-address', (event) => {
     event.sender.send('ip-address', ip);
 });
 
+// On-demand active app query (for "Capture active app" button)
+ipcMain.handle('get-active-app', () => {
+  return new Promise<string>((resolve) => {
+    detectFocusedApp(resolve);
+  });
+});
+
 app.on('window-all-closed', () => {
+  if (appPollInterval) clearInterval(appPollInterval);
   if (process.platform !== 'darwin') app.quit();
 });

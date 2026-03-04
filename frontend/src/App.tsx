@@ -23,6 +23,14 @@ function App() {
   const [logs, setLogs] = useState<{ msg: string; type: 'success' | 'error' | 'info' }[]>([]);
   const backupFileInputRef = useRef<HTMLInputElement>(null);
 
+  
+  // Contextual deck state
+  const [manualDeckId, setManualDeckId] = useState<string | null>(null);
+  const [contextualDeckId, setContextualDeckId] = useState<string | null>(null);
+  const [isDeckSettingsOpen, setIsDeckSettingsOpen] = useState(false);
+  const [settingsDeckName, setSettingsDeckName] = useState('');
+  const [settingsContextApp, setSettingsContextApp] = useState('');
+
   // Check if running in Electron
   const isElectron = !!window.electron;
 
@@ -31,6 +39,58 @@ function App() {
       loadDecks();
     }
   }, [user, isElectron]);
+
+  // Auto-switch deck based on focused app — polls backend every 1.5s
+  useEffect(() => {
+    const hasContextualDecks = decks.some(d => d.contextApp);
+    if (!hasContextualDecks) return;
+
+    let cancelled = false;
+
+    const poll = async () => {
+      if (cancelled) return;
+      try {
+        const appName = await deckService.getActiveApp();
+        if (cancelled || !appName) return;
+
+        const match = decks.find(
+          (d) => d.contextApp && appName.toLowerCase().includes(d.contextApp.toLowerCase())
+        );
+
+        setContextualDeckId((prevContextualId) => {
+          if (match) {
+            if (match.id !== prevContextualId) {
+              setActiveDeckId(match.id);
+              fetchDeck(match.id);
+            }
+            return match.id;
+          } else if (prevContextualId) {
+            // No match — revert to last manually selected deck
+            setManualDeckId((prevManualId) => {
+              const revertId = prevManualId || decks[0]?.id;
+              if (revertId) {
+                setActiveDeckId(revertId);
+                fetchDeck(revertId);
+              }
+              return prevManualId;
+            });
+            return null;
+          }
+          return prevContextualId;
+        });
+      } catch {
+        // Server unreachable — silently skip
+      }
+    };
+
+    poll();
+    const interval = setInterval(poll, 1500);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [decks]);
 
   const loadDecks = async () => {
     setIsLoading(true);
@@ -155,10 +215,44 @@ function App() {
       const newDeck = await deckService.createDeck(name);
       setDecks([...decks, newDeck]);
       setActiveDeckId(newDeck.id);
+      setManualDeckId(newDeck.id);
+      setContextualDeckId(null);
       fetchDeck(newDeck.id);
       addLog(`Deck "${name}" created`, 'success');
     } catch (error) {
       addLog('Failed to create deck', 'error');
+    }
+  };
+
+  const handleOpenDeckSettings = () => {
+    const deck = decks.find(d => d.id === activeDeckId);
+    if (!deck) return;
+    setSettingsDeckName(deck.name);
+    setSettingsContextApp(deck.contextApp || '');
+    setIsDeckSettingsOpen(true);
+  };
+
+  const handleSaveDeckSettings = async () => {
+    if (!activeDeckId) return;
+    try {
+      const updated = await deckService.updateDeckMetadata(activeDeckId, {
+        name: settingsDeckName,
+        contextApp: settingsContextApp || undefined,
+      });
+      setDecks(decks.map(d => d.id === activeDeckId ? updated : d));
+      setIsDeckSettingsOpen(false);
+      addLog('Deck settings saved', 'success');
+    } catch (error) {
+      addLog('Failed to save deck settings', 'error');
+    }
+  };
+
+  const handleCaptureActiveApp = async () => {
+    try {
+      const appName = await deckService.getActiveApp();
+      if (appName) setSettingsContextApp(appName);
+    } catch {
+      addLog('Failed to capture active app', 'error');
     }
   };
 
@@ -317,30 +411,48 @@ function App() {
 
              {/* Deck Selector */}
              <div className="ml-4 flex items-center gap-2">
-                <select 
-                    value={activeDeckId || ''} 
+                <select
+                    value={activeDeckId || ''}
                     onChange={(e) => {
                         if (e.target.value === 'new') {
                             handleCreateDeck();
                         } else {
                             setActiveDeckId(e.target.value);
+                            setManualDeckId(e.target.value);
+                            setContextualDeckId(null);
                             fetchDeck(e.target.value);
                         }
                     }}
                     className="bg-gray-800 text-white text-sm rounded-lg border-none focus:ring-2 focus:ring-blue-500 py-1 pl-3 pr-8"
                 >
                     {decks.map(deck => (
-                        <option key={deck.id} value={deck.id}>{deck.name}</option>
+                        <option key={deck.id} value={deck.id}>
+                            {deck.contextApp ? `⚡ ${deck.name}` : deck.name}
+                        </option>
                     ))}
                     <option value="new">+ New Deck</option>
                 </select>
+                {contextualDeckId && (
+                    <span className="text-xs bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-full px-2 py-0.5 whitespace-nowrap">
+                        Auto
+                    </span>
+                )}
+                {activeDeckId && (
+                    <button
+                        onClick={handleOpenDeckSettings}
+                        className="p-1.5 text-gray-500 hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-800"
+                        title="Deck settings"
+                    >
+                        <Settings size={14} />
+                    </button>
+                )}
                 {activeDeckId && decks.length > 1 && (
-                    <button 
+                    <button
                         onClick={handleDeleteDeck}
-                        className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                        className="p-1.5 text-gray-500 hover:text-red-400 transition-colors rounded-lg hover:bg-gray-800"
                         title="Delete current deck"
                     >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} />
                     </button>
                 )}
             </div>
@@ -611,13 +723,80 @@ function App() {
         />
       )}
 
-      <input
-        ref={backupFileInputRef}
+      {/* Deck Settings Modal */}
+      {isDeckSettingsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <h2 className="text-base font-bold text-white mb-4">Deck Settings</h2>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">
+                  Deck Name
+                </label>
+                <input
+                  type="text"
+                  value={settingsDeckName}
+                  onChange={(e) => setSettingsDeckName(e.target.value)}
+                  className="w-full bg-gray-800 text-white text-sm rounded-lg px-3 py-2 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">
+                  Context App
+                  <span className="ml-1 normal-case font-normal text-gray-600">(auto-switch when this app is focused)</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={settingsContextApp}
+                    onChange={(e) => setSettingsContextApp(e.target.value)}
+                    placeholder="e.g. Visual Studio Code"
+                    className="flex-1 bg-gray-800 text-white text-sm rounded-lg px-3 py-2 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    onClick={handleCaptureActiveApp}
+                    className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-colors whitespace-nowrap"
+                    title="Capture currently focused app"
+                  >
+                    Capture
+                  </button>
+                </div>
+                {settingsContextApp && (
+                  <p className="mt-1 text-xs text-blue-400">
+                    Will auto-activate when &ldquo;{settingsContextApp}&rdquo; is focused
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              <button
+                onClick={handleSaveDeckSettings}
+                className="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold py-2 rounded-lg transition-colors"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => setIsDeckSettingsOpen(false)}
+                className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm font-bold py-2 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+<input
+              ref={backupFileInputRef}
         type="file"
         accept=".json"
         className="hidden"
         onChange={handleBackupFileChange}
       />
+
 
       {/* Footer / Connection Status */}
       <footer className="mt-auto py-8 border-t border-gray-900">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Maximize2, X, ChevronLeft, ChevronRight, Save, Grid } from 'lucide-react';
+import { Maximize2, X, ChevronLeft, ChevronRight, Grid, Save } from 'lucide-react';
 import { DeckButton } from './DeckButton';
 import { DeckButton as IDeckButton } from '../services/deck.service';
 import { useWakeLock } from '../hooks/useWakeLock';

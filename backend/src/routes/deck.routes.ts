@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import os from 'os';
 import { deckService } from '../services/deckService.ts';
 import catchAsync from '../utils/catchAsync.ts';
 import ApiError from '../utils/ApiError.ts';
@@ -79,6 +80,25 @@ deckRoutes.post('/execute', catchAsync(async (c) => {
       stderr: error.stderr 
     }, 500);
   }
+}));
+
+// Returns the name of the currently focused application on the host machine
+deckRoutes.get('/context', catchAsync(async (c) => {
+  const activeApp = await new Promise<string | null>((resolve) => {
+    if (os.platform() === 'darwin') {
+      exec(
+        `osascript -e 'tell application "System Events" to get displayed name of first application process whose frontmost is true'`,
+        (err, stdout) => resolve(!err && stdout.trim() ? stdout.trim() : null)
+      );
+    } else if (os.platform() === 'linux') {
+      exec(`xdotool getactivewindow getwindowname 2>/dev/null`, (err, stdout) =>
+        resolve(!err && stdout.trim() ? stdout.trim() : null)
+      );
+    } else {
+      resolve(null);
+    }
+  });
+  return c.json({ activeApp });
 }));
 
 deckRoutes.get('/:id', catchAsync(async (c) => {
