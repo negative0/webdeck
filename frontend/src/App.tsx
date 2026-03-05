@@ -30,6 +30,7 @@ function App() {
   const [isDeckSettingsOpen, setIsDeckSettingsOpen] = useState(false);
   const [settingsDeckName, setSettingsDeckName] = useState('');
   const [settingsContextApp, setSettingsContextApp] = useState('');
+  const [settingsContextUrl, setSettingsContextUrl] = useState('');
 
   // Check if running in Electron
   const isElectron = !!window.electron;
@@ -40,9 +41,9 @@ function App() {
     }
   }, [user, isElectron]);
 
-  // Auto-switch deck based on focused app — polls backend every 1.5s
+  // Auto-switch deck based on focused app or active URL — polls backend every 1.5s
   useEffect(() => {
-    const hasContextualDecks = decks.some(d => d.contextApp);
+    const hasContextualDecks = decks.some(d => d.contextApp || d.contextUrl);
     if (!hasContextualDecks) return;
 
     let cancelled = false;
@@ -50,11 +51,13 @@ function App() {
     const poll = async () => {
       if (cancelled) return;
       try {
-        const appName = await deckService.getActiveApp();
-        if (cancelled || !appName) return;
+        const { activeApp: appName, activeUrl } = await deckService.getActiveApp();
+        if (cancelled) return;
 
         const match = decks.find(
-          (d) => d.contextApp && appName.toLowerCase().includes(d.contextApp.toLowerCase())
+          (d) =>
+            (d.contextUrl && activeUrl && activeUrl.includes(d.contextUrl)) ||
+            (d.contextApp && appName && appName.toLowerCase().includes(d.contextApp.toLowerCase()))
         );
 
         setContextualDeckId((prevContextualId) => {
@@ -229,6 +232,7 @@ function App() {
     if (!deck) return;
     setSettingsDeckName(deck.name);
     setSettingsContextApp(deck.contextApp || '');
+    setSettingsContextUrl(deck.contextUrl || '');
     setIsDeckSettingsOpen(true);
   };
 
@@ -238,6 +242,7 @@ function App() {
       const updated = await deckService.updateDeckMetadata(activeDeckId, {
         name: settingsDeckName,
         contextApp: settingsContextApp || undefined,
+        contextUrl: settingsContextUrl || undefined,
       });
       setDecks(decks.map(d => d.id === activeDeckId ? updated : d));
       setIsDeckSettingsOpen(false);
@@ -249,10 +254,19 @@ function App() {
 
   const handleCaptureActiveApp = async () => {
     try {
-      const appName = await deckService.getActiveApp();
-      if (appName) setSettingsContextApp(appName);
+      const { activeApp } = await deckService.getActiveApp();
+      if (activeApp) setSettingsContextApp(activeApp);
     } catch {
       addLog('Failed to capture active app', 'error');
+    }
+  };
+
+  const handleCaptureActiveUrl = async () => {
+    try {
+      const { activeUrl } = await deckService.getActiveApp();
+      if (activeUrl) setSettingsContextUrl(activeUrl);
+    } catch {
+      addLog('Failed to capture active URL', 'error');
     }
   };
 
@@ -766,6 +780,34 @@ function App() {
                 {settingsContextApp && (
                   <p className="mt-1 text-xs text-blue-400">
                     Will auto-activate when &ldquo;{settingsContextApp}&rdquo; is focused
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">
+                  Context URL
+                  <span className="ml-1 normal-case font-normal text-gray-600">(auto-switch when this site is open)</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={settingsContextUrl}
+                    onChange={(e) => setSettingsContextUrl(e.target.value)}
+                    placeholder="e.g. github.com"
+                    className="flex-1 bg-gray-800 text-white text-sm rounded-lg px-3 py-2 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    onClick={handleCaptureActiveUrl}
+                    className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-colors whitespace-nowrap"
+                    title="Capture active browser URL"
+                  >
+                    Capture
+                  </button>
+                </div>
+                {settingsContextUrl && (
+                  <p className="mt-1 text-xs text-blue-400">
+                    Will auto-activate on pages containing &ldquo;{settingsContextUrl}&rdquo;
                   </p>
                 )}
               </div>

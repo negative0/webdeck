@@ -50,9 +50,29 @@ deckRoutes.post('/execute', catchAsync(async (c) => {
 
   if (type === 'SHORTCUT') {
     if (process.platform === 'darwin') {
-      // Escape for AppleScript and Shell
-      const safeCommand = command.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/'/g, "'\\''");
-      finalCommand = `osascript -e 'tell application "System Events" to keystroke "${safeCommand}"'`;
+      const parts = command.split('+');
+      const modifierMap: Record<string, string> = {
+        ctrl: 'control down',
+        control: 'control down',
+        cmd: 'command down',
+        command: 'command down',
+        shift: 'shift down',
+        alt: 'option down',
+        option: 'option down',
+      };
+      const modifiers: string[] = [];
+      let key = '';
+      for (const part of parts) {
+        const lower = part.toLowerCase();
+        if (modifierMap[lower]) {
+          modifiers.push(modifierMap[lower]);
+        } else {
+          key = part;
+        }
+      }
+      const safeKey = key.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      const usingClause = modifiers.length > 0 ? ` using {${modifiers.join(', ')}}` : '';
+      finalCommand = `osascript -e 'tell application "System Events" to keystroke "${safeKey}"${usingClause}'`;
     } else {
       // Linux/X11 implementation
       finalCommand = `xdotool key "${command}"`;
@@ -82,7 +102,13 @@ deckRoutes.post('/execute', catchAsync(async (c) => {
   }
 }));
 
-// Returns the name of the currently focused application on the host machine
+const BROWSER_APPLESCRIPTS: Record<string, string> = {
+  'Google Chrome': `tell application "Google Chrome" to get URL of active tab of front window`,
+  'Arc':           `tell application "Arc" to get URL of active tab of front window`,
+  'Safari':        `tell application "Safari" to get URL of front document`,
+};
+
+// Returns the name of the currently focused application and active browser URL
 deckRoutes.get('/context', catchAsync(async (c) => {
   const activeApp = await new Promise<string | null>((resolve) => {
     if (os.platform() === 'darwin') {
@@ -98,7 +124,18 @@ deckRoutes.get('/context', catchAsync(async (c) => {
       resolve(null);
     }
   });
-  return c.json({ activeApp });
+
+  let activeUrl: string | null = null;
+  if (activeApp && BROWSER_APPLESCRIPTS[activeApp] && os.platform() === 'darwin') {
+    const script = BROWSER_APPLESCRIPTS[activeApp];
+    activeUrl = await new Promise((resolve) => {
+      exec(`osascript -e '${script}'`, (err, stdout) =>
+        resolve(!err && stdout.trim() ? stdout.trim() : null)
+      );
+    });
+  }
+
+  return c.json({ activeApp, activeUrl });
 }));
 
 deckRoutes.get('/:id', catchAsync(async (c) => {
