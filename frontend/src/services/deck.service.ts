@@ -30,8 +30,8 @@ export const deckService = {
     return response.data;
   },
   
-  createDeck: async (name: string, rows: number = 3, cols: number = 5): Promise<Deck> => {
-    const response = await api.post('/deck/list', { name, rows, cols });
+  createDeck: async (name: string, rows: number = 3, cols: number = 5, contextApp?: string, contextUrl?: string): Promise<Deck> => {
+    const response = await api.post('/deck/list', { name, rows, cols, contextApp, contextUrl });
     return response.data;
   },
 
@@ -67,6 +67,11 @@ export const deckService = {
 
   suggestCommand: async (prompt: string): Promise<Partial<DeckButton>> => {
     const response = await api.post('/ai/suggest', { prompt });
+    return response.data;
+  },
+
+  generateDeck: async (prompt: string): Promise<{ name: string; contextApp?: string; rows: number; cols: number; buttons: DeckButton[] }> => {
+    const response = await api.post('/ai/generate-deck', { prompt });
     return response.data;
   },
 

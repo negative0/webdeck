@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Layout, Settings, Plus, RefreshCw, Monitor, Smartphone, Terminal, Play, LogOut, Sparkles, Trash2, Download, Upload } from 'lucide-react';
 import { DeckGrid } from './components/DeckGrid';
 import { CommandConfig } from './components/CommandConfig';
+import { DeckGenerator } from './components/DeckGenerator';
 import { EmojiKeyboard } from './components/EmojiKeyboard';
 import { deckService, DeckButton, Deck } from './services/deck.service';
 import { authService } from './services/auth.service';
@@ -22,6 +23,7 @@ function App() {
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [logs, setLogs] = useState<{ msg: string; type: 'success' | 'error' | 'info' }[]>([]);
   const backupFileInputRef = useRef<HTMLInputElement>(null);
+  const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
 
   
   // Contextual deck state
@@ -224,6 +226,36 @@ function App() {
       addLog(`Deck "${name}" created`, 'success');
     } catch (error) {
       addLog('Failed to create deck', 'error');
+    }
+  };
+
+  const handleGenerateDeck = async (config: { name: string; contextApp?: string; rows: number; cols: number; buttons: DeckButton[] }) => {
+    try {
+      // Create the new deck with generated name and contextApp
+      const newDeck = await deckService.createDeck(config.name, config.rows, config.cols, config.contextApp);
+      
+      // Prepare buttons with proper IDs and deckId
+      const buttonsWithIds = config.buttons.map(btn => ({
+        ...btn,
+        id: Math.random().toString(36).substring(2, 15),
+        deckId: newDeck.id
+      }));
+
+      // Save the buttons to the new deck
+      await deckService.saveDeckConfig(buttonsWithIds, newDeck.id);
+
+      // Update state
+      setDecks([...decks, newDeck]);
+      setActiveDeckId(newDeck.id);
+      setManualDeckId(newDeck.id);
+      setContextualDeckId(null);
+      setIsGeneratorOpen(false);
+
+      // Load the deck
+      fetchDeck(newDeck.id);
+      addLog(`Deck "${config.name}" created with AI`, 'success');
+    } catch (error: any) {
+      addLog(`Failed to create deck: ${error?.response?.data?.message || error.message}`, 'error');
     }
   };
 
@@ -430,6 +462,8 @@ function App() {
                     onChange={(e) => {
                         if (e.target.value === 'new') {
                             handleCreateDeck();
+                        } else if (e.target.value === 'generate') {
+                            setIsGeneratorOpen(true);
                         } else {
                             setActiveDeckId(e.target.value);
                             setManualDeckId(e.target.value);
@@ -445,6 +479,7 @@ function App() {
                         </option>
                     ))}
                     <option value="new">+ New Deck</option>
+                    <option value="generate">✨ Generate with AI</option>
                 </select>
                 {contextualDeckId && (
                     <span className="text-xs bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-full px-2 py-0.5 whitespace-nowrap">
@@ -724,6 +759,13 @@ function App() {
           }}
           availablePositions={getAvailablePositions()}
           autoFocusAI={isAiMode}
+        />
+      )}
+
+      {isGeneratorOpen && (
+        <DeckGenerator
+          onGenerate={handleGenerateDeck}
+          onCancel={() => setIsGeneratorOpen(false)}
         />
       )}
 
