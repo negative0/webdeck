@@ -1,6 +1,17 @@
 # WebDeck
 
-WebDeck is a multi-platform application consisting of a backend API, a web frontend, a desktop application (Electron), and a mobile application (Expo).
+WebDeck is a powerful, self-hosted, multi-platform control surface that allows you to trigger remote commands, scripts, and automations from a customizable button grid. Similar to a physical Stream Deck, WebDeck gives you a digital interface to control your server or workstation from any device.
+
+## Key Features
+
+- **Customizable Button Grid**: Design your own control layout with custom labels, icons, and colors.
+- **Remote Command Execution**: Execute shell commands, scripts, or system actions directly on your backend server.
+- **AI-Powered Suggestions**: Integrated AI assistant to help you generate and optimize commands based on natural language prompts.
+- **Multi-Platform Support**:
+    - **Web**: Access your control deck from any browser.
+    - **Desktop**: A native Electron app for focused control.
+    - **Mobile**: A mobile application (Expo) for controlling your system on the go.
+- **Secure Integration**: Built-in authentication and modular integration support for LLMs (OpenAI, Anthropic, Gemini), storage (S3, Azure, GCS), and more.
 
 ## Project Structure
 
@@ -11,6 +22,7 @@ WebDeck is a multi-platform application consisting of a backend API, a web front
 
 ## Prerequisites
 
+- **macOS** (Currently, the backend only supports macOS for command execution)
 - [Node.js](https://nodejs.org/) (v18 or higher recommended)
 - [pnpm](https://pnpm.io/) (used for backend/frontend) or npm
 - [Docker](https://www.docker.com/) (optional, for database and containerized runs)
@@ -93,3 +105,8 @@ For more detailed Docker instructions, see [RUN_LOCALLY.md](./RUN_LOCALLY.md).
 ## API Documentation
 
 For details on the backend API, refer to [API_SPECIFICATION.md](./API_SPECIFICATION.md).
+
+## License & Security
+
+- **License**: This project is licensed under the [MIT License](./LICENSE).
+- **Security**: Please read our [Security Advisory](./SECURITY.md) before deploying.
